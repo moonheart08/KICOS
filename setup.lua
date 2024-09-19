@@ -2,6 +2,11 @@ local internet = require("internet")
 local fs = require("filesystem")
 local branch = "master"
 local remoteFilesUrl = "https://raw.githubusercontent.com/moonheart08/gtnh-oc/"..branch.."/"
+local runningStandalone = false
+
+if fs.__kicosFlag then
+	runningStandalone = true
+end
 
 local function grabFile(url)
 	local handle = internet.request(url)
@@ -25,6 +30,7 @@ end
 -- Maps files on the disk to files on the repo. They will be fetched and emplaced one at a time.
 local repoMap = {
 	{"/bin/setup.lua", "setup.lua"}
+	{"/bin/opl_flash.lua", "opl_flash.lua"}
 }
 
 -- OC computers don't have particularly much disk space, much less RAM, so I opt to not try to cache the changes in memory before applying.
