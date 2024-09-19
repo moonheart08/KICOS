@@ -4,7 +4,7 @@ local branch = "master"
 local remoteFilesUrl = "https://raw.githubusercontent.com/moonheart08/gtnh-oc/"..branch.."/"
 local runningStandalone = false
 
-if fs.__kicosFlag then
+if string.find(_OSVERSION, "KICOS") != nil then
 	runningStandalone = true
 end
 
@@ -20,7 +20,7 @@ local function grabFile(url)
 	
 	local code, message, headers = mt.__index.response()
 	
-	if tostring(code) != "200" then
+	if tostring(code) ~= "200" then
 		error("Expected a 200 response when fetching " .. url .. " but got " .. code .. "instead.")
 	end
 	
@@ -39,5 +39,14 @@ for k,entry in pairs(repoMap) do
 	local data = grabFile(url)
 	local handle = fs.open(entry[1], "wb")
 	handle:write(data)
+	handle:close()
+end
+
+-- Flash OPL.
+loadfile("/bin/opl_flash.lua")()
+
+if runningStandalone then 
+	local handle = fs.open("/.osprop", "wb")
+	handle:write("return {name = \"KICOS " .. branch .. "\"}")
 	handle:close()
 end
