@@ -10,11 +10,7 @@ local function grabFile(url)
 	for chunk in handle do 
 		result = result..chunk 
 	end
-	
-	local mt = getmetatable(handle)
-	
-	local code, message, headers = mt.__index.response()
-	
+
 	return result
 end
 
