@@ -10,7 +10,15 @@ local function grabFile(url)
 	for chunk in handle do 
 		result = result..chunk 
 	end
-
+	
+	local mt = getmetatable(handle)
+	
+	local code, message, headers = mt.__index.response()
+	
+	if tostring(code) != "200" then
+		error("Expected a 200 response when fetching " .. url .. " but got " .. code .. "instead.")
+	end
+	
 	return result
 end
 
