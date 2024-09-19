@@ -36,7 +36,7 @@ local repoMap = {
 -- OC computers don't have particularly much disk space, much less RAM, so I opt to not try to cache the changes in memory before applying.
 for k,entry in pairs(repoMap) do
 	local url = remoteFilesUrl .. entry[2]
-	local data = grabFile(url)
+	local data = grabFile(url .. "?" .. tostring(math.random()))
 	local handle = fs.open(entry[1], "wb")
 	handle:write(data)
 	handle:close()
