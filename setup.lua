@@ -4,7 +4,7 @@ local branch = "master"
 local remoteFilesUrl = "https://raw.githubusercontent.com/moonheart08/gtnh-oc/"..branch.."/"
 local runningStandalone = false
 
-if string.find(_OSVERSION, "KICOS") != nil then
+if string.find(_OSVERSION, "KICOS") ~= nil then
 	runningStandalone = true
 end
 
