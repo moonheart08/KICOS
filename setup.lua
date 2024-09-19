@@ -29,7 +29,7 @@ end
 
 -- Maps files on the disk to files on the repo. They will be fetched and emplaced one at a time.
 local repoMap = {
-	{"/bin/setup.lua", "setup.lua"}
+	{"/bin/setup.lua", "setup.lua"},
 	{"/bin/opl_flash.lua", "opl_flash.lua"}
 }
 
