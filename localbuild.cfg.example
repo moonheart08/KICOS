@@ -1,0 +1,6 @@
+// Yes, this is JSON. I don't like it either :(
+
+{
+	// Path to the virtual disk, presumably a floppy, that the OS is being built into.
+	"disk_path": "C:\\your\\minecraft\\world\\folder" 
+}
