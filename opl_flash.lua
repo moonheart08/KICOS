@@ -159,7 +159,14 @@ local computer = require "computer"
 local shell = require "shell"
 local term = require "term"
 
-local args, options = shell.parse(...)
+local args = nil
+local options = nil
+
+if type(...) == "table" then
+	options = ...
+else
+	args, options = shell.parse(...)
+end
 
 if options.h or options.help then
   print("opl-flash [-hqr] [--label=EEPROMLabel]")

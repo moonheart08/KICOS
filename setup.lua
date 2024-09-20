@@ -28,9 +28,11 @@ local function grabFile(url)
 end
 
 -- Maps files on the disk to files on the repo. They will be fetched and emplaced one at a time.
+-- These are files for the local host, not the target system!
 local repoMap = {
 	{"/bin/setup.lua", "setup.lua"},
 	{"/bin/opl_flash.lua", "opl_flash.lua"}
+	{"/bin/kicos_disk_builder.lua", "kicos_disk_builder.lua"}
 }
 
 -- OC computers don't have particularly much disk space, much less RAM, so I opt to not try to cache the changes in memory before applying.
@@ -43,10 +45,8 @@ for k,entry in pairs(repoMap) do
 end
 
 -- Flash OPL.
-loadfile("/bin/opl_flash.lua")()
-
-if runningStandalone then 
-	local handle = fs.open("/.osprop", "wb")
-	handle:write("return {name = \"KICOS " .. branch .. "\"}")
-	handle:close()
-end
+loadfile("/bin/opl_flash.lua")({["quiet"]=true})
+loadfile("/bin/kicos_disk_builder.lua")({
+	["fs"] = fs
+	["grabFile"] = grabFile
+}
