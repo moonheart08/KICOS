@@ -162,8 +162,8 @@ local term = require "term"
 local args = nil
 local options = nil
 
-if type(...) == "table" then
-	options = ...
+if type(... or {}) == "table" then
+	options = ... or {}
 else
 	args, options = shell.parse(...)
 end
