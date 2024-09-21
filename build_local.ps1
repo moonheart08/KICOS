@@ -7,4 +7,4 @@ if ( -not (Test-Path -Path "$($cfg.disk_path)/OVERWRITABLE_SENTINAL"))
 
 # Spooky!
 Remove-Item "$($cfg.disk_path)/*" -Recurse -Exclude "OVERWRITABLE_SENTINAL"
-Copy-Item -Path ".\disk_template\*" -Destination $cfg.disk_path -Recurse
+Copy-Item -Path ".\disk_template\*" -Destination $cfg.disk_path -Recurse -Exclude "*.bak"
