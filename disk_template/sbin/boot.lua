@@ -45,25 +45,13 @@ end
 _, err = xpcall(function() 
 	syslog:info("Entering protected context.")
 	syslog:info("Booting %s with %s/%s B of RAM", _G._OSVERSION, computer.freeMemory(), computer.totalMemory())
+	_kicosCtx.scheduler = raw_loadfile("/slib/scheduler.lua")()
 	_kicosCtx.workers = raw_loadfile("/slib/workers.lua")()
+	
 	local os_worker = _kicosCtx.workers.Worker:_new_empty("KICOS")
 	os_worker:_assign_coroutine(coroutine.running())
-	coroutine.setName(coroutine.running(), "Scheduler")
-	syslog:debug("State: %s", os_worker:status(true))
 	
 	syslog:info("Entering scheduler.")
-	
-	local uptime = computer.uptime
-	local pull = computer.pullSignal
-	local push = computer.pushSignal
-	
-	local function yieldToOC()
-	    local signal = table.pack(pull(0))
-
-		if signal.n > 0 then
-		  push(table.unpack(signal, 1, signal.n))
-		end
-	end
 	
 	local function runProcess(file, ...)
 		local worker = raw_loadfile(file)
@@ -72,13 +60,6 @@ _, err = xpcall(function()
 	
 	runProcess("/slib/startup.lua", raw_loadfile)
 	
-	while true do
-		for k,v in ipairs(_kicosCtx.workers._worker_list) do
-			if v._leader ~= nil then
-				coroutine.resume(v._leader)
-			end
-			yieldToOC()
-		end
-	end
+	_kicosCtx.scheduler.run()
 end, sys_errhandler)
 

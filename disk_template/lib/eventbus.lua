@@ -1,0 +1,128 @@
+local eventbus = {
+	maxEventsPumped = 16,
+	_listeners = {}
+}
+
+local syslog = require("syslog")
+local workers = require("workers")
+
+local native_pull = computer.pullSignal
+local native_push = computer.pushSignal
+
+function eventbus.pump()
+	local i = 0
+	
+	while i < eventbus.maxEventsPumped do
+		local signal = table.pack(native_pull(0))
+
+		if signal.n > 0 then
+			-- Oooo, what'd we find?
+			local kind = signal[1]
+
+			if eventbus._listeners[kind] ~= nil then
+				local to_remove = {}
+				for k, v in pairs(eventbus._listeners[kind]) do
+					-- Middle argument voided due to being used by the OS!
+					local status, _, status2 = coroutine._nativeResume(v, table.unpack(signal))
+					status = status and status2
+					if not status then
+						table.insert(to_remove, k)
+					end
+				end
+				
+				local adj = 0
+				for _, v in ipairs(to_remove) do
+					syslog:trace("Removed listener %s from event %s", workers.prettyPrintCoroutine(eventbus._listeners[kind][v]), kind)
+					eventbus._listeners[kind][v] = nil
+				end
+			end
+		else
+			return -- out of events to pump
+		end
+		
+		i = i + 1
+	end
+end
+
+-- Note: Unlike OpenOS, this does not support patterns for the filter!
+-- Note 2: Must be called 
+function eventbus.pull(timeout, filter, ...)
+	local curr = _kicosCtx.workers.current()
+	local share = nil
+	local listener = coroutine.createNamed(function(...) 
+		share = table.pack(...)
+		return false
+	end, string.format("EVBus listener (%s)", filter))
+	
+	eventbus.listen(filter, listener)
+	
+	curr._ev_waiter = function() 
+		if share == nil then
+			return true
+		end
+		
+		curr._ev_waiter = nil
+		return false
+	end
+	
+	coroutine.yieldToOS() -- Yield to the OS scheduler.
+	
+	return table.unpack(share)
+end
+
+-- Takes an event to listen to, and a function or coroutine to act as a listener.
+function eventbus.listen(event, co)
+	local listeners = eventbus._listeners
+	if listeners[event] == nil then
+		listeners[event] = {}
+	end
+	
+	local t = listeners[event]
+	
+	if type(co) == "function" then
+		local co_ref = co
+		co = coroutine.create(function(...)
+			local args = table.pack(...)
+			while true do
+				args = table.pack(coroutine.yield(co_ref(table.unpack(args))))
+			end
+		end)
+	end
+	
+	syslog:trace("Attached listener %s to event %s", workers.prettyPrintCoroutine(co), event)
+	
+	t[tostring(co)] = co
+	return tostring(co)
+end
+
+function eventbus.remove(event, co, idx)
+	local listeners = eventbus._listeners
+	if listeners[event] == nil then
+		return false
+	end
+	
+	local t = listeners[event]
+	
+	if t[idx] ~= co then
+		return false
+	end
+	
+	return eventbus._remove(event, idx)
+end
+
+function eventbus._remove(event, idx)
+	local listeners = eventbus._listeners
+	if listeners[event] == nil then
+		return false
+	end
+	
+	local t = listeners[event]
+	
+	t[idx] = nil
+	
+	return true
+end
+
+computer.pullEvent = eventbus.pull -- No, don't you dare use the builtin pull to freeze my system.
+
+return eventbus

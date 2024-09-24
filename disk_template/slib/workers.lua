@@ -3,6 +3,7 @@
 
 local builtin_coroutine = coroutine
 local syslog = _kicosCtx.syslog
+local scheduler = _kicosCtx.scheduler
 
 local workers = {}
 
@@ -28,16 +29,33 @@ function Worker:new(body, name, ...)
 			end
 		end
 		
-		xpcall(function()
-			body(table.unpack(workerArgs))
+		local res = xpcall(function()
+			return body(table.unpack(workerArgs))
 		end, workerDeathHandler)
+		
+		o:exit(res)
 	end, o)
 	coroutine.setName(o._leader, "Leader")
+	-- Hashset. Yea this stinks.
+	scheduler._scheduled_workers[o] = o
 	return o
 end
 
+function workers.runProgram(file, ...)
+	local contents = loadfile(file)
+	return Worker:new(contents, file, ...)
+end
+
+function workers.runThread(f, name, ...)
+	return Worker:new(f, name, ...)
+end
+
 function Worker:_new_empty(name)
-	local o = {}
+	local o = {
+		dead = false,
+		_ev_waiter = nil,
+	}
+	
 	setmetatable(o, self)
 	self.__index = self
 	o.coroutines = {}
@@ -60,6 +78,25 @@ function Worker:_assign_coroutine(co)
 	table.insert(self.coroutines, co)
 	local data = { worker = self }
 	coroutineWorkerMap[co] = data
+end
+
+	
+function Worker:paused()
+	if self._ev_waiter ~= nil then
+		return self._ev_waiter()
+	end
+	
+	return false
+end
+
+function Worker:exit(res)
+	self.dead = true
+	syslog:info("%s has exited (result %s)",self, res or 0)
+	workers._worker_list[self.id] = nil -- Sparse, but that's fine.
+	scheduler._scheduled_workers[self] = nil -- If it wasn't already, it is now!
+	if workers.current() == self then
+		coroutine.yieldToOS()
+	end
 end
 
 function Worker:__tostring()
@@ -102,7 +139,7 @@ end
 
 function workers.current()
 	local curr = coroutine.running()
-	return workers._get_coroutine_data(co).worker
+	return workers._get_coroutine_data(curr).worker
 end
 
 function workers.top(writer)
@@ -133,10 +170,58 @@ local coroutine = {
 		return co
 	end,
 	
-	resume = builtin_coroutine.resume,
-	yield = builtin_coroutine.yield,
+	resume = function(co, ...)
+		local data = workers._get_coroutine_data(co)
+		if data == nil then
+			return builtin_coroutine.resume(co, ...)
+		end
+		
+		if data.dead then
+			return false, "Worker died, cannot process."
+		end
+		
+		if data.worker:paused() and workers.current().id ~= 1 then
+			return false, "Coroutine paused. Not dead, though!"
+		end
+		while true do
+			local res = table.pack(builtin_coroutine.resume(co, ...))
+			if res[1] and not res[2] then -- OS yield. Get me outta here.
+				builtin_coroutine.yield()
+			else
+				table.remove(res, 2)
+				return table.unpack(res)
+			end
+		end
+	end,
+	_nativeResume = builtin_coroutine.resume,
+	yield = function(...)
+		return builtin_coroutine.yield(true, ...)
+	end,
+	yieldToOS = function()
+		-- Yielding the OS thread causes death.
+		if workers.current().id ~= 1 then
+			builtin_coroutine.yield(false)
+		end
+	end,
 	running = builtin_coroutine.running,
-	status = builtin_coroutine.status,
+	status = function(co)
+		local data = workers._get_coroutine_data(co)
+		if data == nil then
+			return builtin_coroutine.status(co)
+		end
+		
+		if data.dead then
+			return "dead"
+		end
+		
+		if data.worker:paused() then
+			-- Condition is unique to KICOS, and will only be run into if you're using the eventbus or other OS features.
+			-- Do not try to resume a paused coroutine, 
+			return "paused"
+		end
+		
+		return builtin_coroutine.status(co)
+	end,
 	wrap = function(f, _worker)
 		local curr = builtin_coroutine.running()
 		local currData = workers._get_coroutine_data(curr)

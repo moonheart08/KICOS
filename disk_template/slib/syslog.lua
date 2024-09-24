@@ -18,13 +18,18 @@ function syslog:setMaxLogLevel(level)
 	maxLogLevel = level
 end
 
+syslog.unsaved = {}
+
 function syslog:log(level, message, ...)
 	local levelData = logLevels[level]
 	if maxLogLevel < levelData[1] then
 		return -- Be silent.
 	end
 	
-	_G._logVTerm:printText("[" .. levelData[2] .. "] " .. string.format(message, ...))
+	local msg = "[" .. levelData[2] .. "] " .. string.format(message, ...)
+	
+	_G._logVTerm:printText(msg)
+	table.insert(syslog.unsaved, msg)
 end
 
 function syslog:error(message, ...)

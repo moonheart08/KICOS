@@ -9,6 +9,8 @@ package.loaded = {
 	["workers"] = _kicosCtx.workers,
 	["vterm"] = _kicosCtx.VTerm,
 	["syslog"] = _kicosCtx.syslog,
+	["scheduler"] = _kicosCtx.scheduler,
+	["kicos"] = _kicosCtx,
 	["math"] = math,
 	["os"] = os,
 	["package"] = package,
@@ -27,14 +29,20 @@ package.require = function(pname)
 	
 	for _, locator in ipairs(package.locators) do
 		local status, res = pcall(locator, pname)
-		if status then
+		if status and res ~= nil then
 			local pkg = res()
-			package.loaded[pname] = pkg
+			package._insert(pname, pkg)
 			return pkg
+		elseif res ~= nil then
+			syslog:warning("Package locator failed, got %s", res)
 		end
 	end
 	
 	error("Couldn't locate package " .. pname)
+end
+
+package._insert = function(pname, t)
+	package.loaded[pname] = t
 end
 
 _G.require = package.require
