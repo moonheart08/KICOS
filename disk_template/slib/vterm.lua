@@ -1,18 +1,21 @@
 -- Bind the globals locally.
 local component = component
 local VTerm = {
-	background = 0x000000,
-	foreground = 0xFFBF00,
-	scrollPos = 1,
-	scrollback = {},
-	maxScrollback = 64, -- A small number by default for systems with little RAM.
-	physicalScrollPos = 1,
+
 }
 
-local vtermId = 0
+local vtermId = 1
 
 function VTerm:new(screen, gpu)
-	local o = {}
+	local o = {
+		background = 0x000000,
+		foreground = 0xFFBF00,
+		scrollPos = 0,
+		scrollback = {},
+		maxScrollback = 64, -- A small number by default for systems with little RAM.
+		physicalScrollPos = 1,
+		viewMode = 1, -- 1: Text 2: DirectDraw
+	}
 	setmetatable(o, self)
 	self.__index = self
 	
@@ -24,13 +27,16 @@ function VTerm:new(screen, gpu)
 		gpu = component.proxy(gpu)
 	end
 	
+	o.vtermId = vtermId
 	vtermId = vtermId + 1
 	
 	screen.turnOn() -- Ensure the display is, y'know, actually on.
 	
-	local w, h = gpu.maxResolution()
-	o._width = w
-	o._height = h
+	if gpu ~= nil then
+		local w, h = gpu.maxResolution()
+		o._width = w
+		o._height = h
+	end
 	
 	o._screen = screen
 	o._gpu = gpu
@@ -63,7 +69,7 @@ function VTerm:_prepForDrawInner()
 	self._gpu.setBackground(self.background)
 	self._gpu.setForeground(self.foreground)
 	self._gpu.fill(1, self._height, self._width, self._height, " ")
-	self._gpu.set(1,self._height,"VTERM "..tostring(vtermId))
+	self._gpu.set(1,self._height,"VTERM "..tostring(self.vtermId))
 	return true
 end
 
@@ -71,14 +77,30 @@ function VTerm:clear()
 	self:_prepForDraw()
 	
 	self._gpu.fill(1, 1, self._width, self._height, " ")
-	self._gpu.set(1,self._height,"VTERM "..tostring(vtermId))
+	self._gpu.set(1,self._height,"VTERM "..tostring(self.vtermId))
+end
+
+function VTerm:unbind()
+	self._gpu = nil
+	self._screen = nil
+end
+
+function VTerm:isTextMode()
+	return self.viewMode == 1
 end
 
 function VTerm:printText(text)
+	if not self:isTextMode() then
+		return
+	end
+
 	for text in text:gmatch("([^\n]+)") do 
 		table.insert(self.scrollback, text)
+
 		if (#self.scrollback) > self.maxScrollback then
 			table.remove(self.scrollback, 1) -- Drop the tail.
+		else
+			self.scrollPos = self.scrollPos + 1
 		end
 
 		repeat 
@@ -89,6 +111,28 @@ function VTerm:printText(text)
 	end
 end
 
+function VTerm:redraw()
+	self.physicalScrollPos = 0
+	self:clear() -- Reset everything.
+	-- And draw our scrollback, starting from scrollPos
+	local endPos = self.scrollPos
+	local currPos = math.min(1, endPos - self._height)
+	
+	while currPos ~= (endPos + 1) do
+		local text = self.scrollback[currPos]
+		if text ~= nil then
+			repeat 
+				local toPrint = text:sub(1, self._width)
+				self:_printTextInner(toPrint)
+				text = text:sub(self._width, math.maxinteger or math.huge)
+			until text == ""
+		end
+		currPos = currPos + 1
+	end
+	
+	_kicosCtx.syslog:debug("Fully redrew VTerm %s.", self.vtermId)
+end
+
 -- Doesn't properly handle very long lines.
 function VTerm:_printTextInner(text)
 	if not self:_prepForDraw() then
@@ -97,8 +141,8 @@ function VTerm:_printTextInner(text)
 
 	self._gpu.set(1, self.physicalScrollPos, text)
 	if self._height - 1 == self.physicalScrollPos then
-		gpu.copy(1, 2, self.width, self._height - 2, 0, -1)
-		gpu.fill(1, self._height - 1, self.width, 1, " ")
+		self._gpu.copy(1, 2, self._width, self._height - 2, 0, -1)
+		self._gpu.fill(1, self._height - 1, self._width, 1, " ")
 	else
 		self.physicalScrollPos = self.physicalScrollPos + 1
 	end

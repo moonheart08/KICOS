@@ -5,16 +5,17 @@ _G._OSVERSION = "KICOS v0.0.0"
 
 
 -- All files in slib are safe to load early, and go straight into the exec context.
+_G._kicosCtx = {}
 
-VTerm = raw_loadfile("/slib/vterm.lua")()
-_G.VTerm = VTerm
+local VTerm = raw_loadfile("/slib/vterm.lua")()
+_G._kicosCtx.VTerm = VTerm
 
 local screen = component.list("screen", true)()
 local gpu = screen and component.list("gpu", true)()
 
 _G._logVTerm = VTerm:new(screen, gpu)
 
-_G._kicosCtx = {}
+
 _kicosCtx.syslog = raw_loadfile("/slib/syslog.lua")()
 _kicosCtx.bootDevice = computer.getBootAddress()
 
@@ -24,10 +25,14 @@ syslog:info("Booting from %s", _kicosCtx.bootDevice)
 syslog:debug("Testing really long text: AWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWA")
 
 local function sys_errhandler(x)
-	syslog:error("System died!")
+	syslog:error("Core thread died!")
 	syslog:error(x)
 	for i in debug.traceback():gmatch("([^\n]+)") do
-		syslog:error(i)
+		if i:match(".machine:.*") ~= nil then
+		else
+			syslog:error(i)
+		end
+
 	end
 end
 
@@ -43,22 +48,37 @@ _, err = xpcall(function()
 	_kicosCtx.workers = raw_loadfile("/slib/workers.lua")()
 	local os_worker = _kicosCtx.workers.Worker:_new_empty("KICOS")
 	os_worker:_assign_coroutine(coroutine.running())
-	coroutine.setName(coroutine.running(), "Core")
+	coroutine.setName(coroutine.running(), "Scheduler")
 	syslog:debug("State: %s", os_worker:status(true))
 	
-	syslog:info("Searching for early boot drivers.")
+	syslog:info("Entering scheduler.")
 	
-	for addr, ty in component.list() do
-		local success = " "
-		local path = "/slib/ebd_" .. ty .. ".lua"
-		if component.invoke(_kicosCtx.bootDevice, "exists", path) then
-			syslog:info("[x] %s %s", addr, ty)
-			raw_loadfile(path)()
-		else 
-			syslog:info("[ ] %s %s", addr, ty)
+	local uptime = computer.uptime
+	local pull = computer.pullSignal
+	local push = computer.pushSignal
+	
+	local function yieldToOC()
+	    local signal = table.pack(pull(0))
+
+		if signal.n > 0 then
+		  push(table.unpack(signal, 1, signal.n))
 		end
-		
-		
+	end
+	
+	local function runProcess(file, ...)
+		local worker = raw_loadfile(file)
+		_kicosCtx.workers.Worker:new(worker, file, ...)
+	end
+	
+	runProcess("/slib/startup.lua", raw_loadfile)
+	
+	while true do
+		for k,v in ipairs(_kicosCtx.workers._worker_list) do
+			if v._leader ~= nil then
+				coroutine.resume(v._leader)
+			end
+			yieldToOC()
+		end
 	end
 end, sys_errhandler)
 
