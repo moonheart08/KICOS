@@ -123,6 +123,7 @@ function filesystem.mount(fs, path)
 end
 
 function filesystem.unmount(path)
+	syslog:info("Unmounting %s", path)
 	local node = VFSNode.getNodeAt(filesystem._root, path, true)
 	if node == nil then
 		return false
@@ -165,6 +166,22 @@ function filesystem.isFile(path)
 	local overlay, relative = filesystem.getRelativeBase(path)
 	
 	return not overlay.proxy.isDirectory(relative)
+end
+
+function filesystem.makeDirectory(path)
+	local overlay, relative = filesystem.getRelativeBase(path)
+	
+	return overlay.proxy.makeDirectory(relative)
+end
+
+function filesystem.ensureDirectory(path)
+	local overlay, relative = filesystem.getRelativeBase(path)
+	
+	if filesystem.exists(path) then
+		return filesystem.isDirectory(path) 
+	else 
+		return filesystem.makeDirectory(path)
+	end
 end
 
 function filesystem.readFile(path)

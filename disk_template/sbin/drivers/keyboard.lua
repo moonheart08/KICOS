@@ -84,6 +84,12 @@ while true do
 			syslog.setMaxLogLevel(3)
 		elseif lastPressedKey == keyboard.keys["5"] then
 			syslog.setMaxLogLevel(4)
+		elseif lastPressedKey == keyboard.keys["c"] then
+			for addr, ty in require("component").list() do
+				syslog:info("C %s %s", addr, ty)
+			end
+		else
+			syslog:warning("Unknown SYSRQ {%s}", keyboard.keys[lastPressedKey])
 		end
 		
 		sysrqRequested = false

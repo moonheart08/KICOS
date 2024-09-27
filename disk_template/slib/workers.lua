@@ -42,7 +42,8 @@ function Worker:new(body, name, ...)
 end
 
 function workers.runProgram(file, ...)
-	local contents = loadfileExt(file, workers.buildGlobalContext())
+	local contents, err = loadfileExt(file, workers.buildGlobalContext())
+	assert(not err, err)
 	coroutine.yieldToOS()
 	return Worker:new(contents, file:match("/([^/]+)$"), ...)
 end
