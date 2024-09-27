@@ -19,7 +19,7 @@ function Overlay:new(fs, physPath)
 	setmetatable(o, self)
 	self.__index = self
 	
-	syslog:debug("Mounting %s", fs)
+	syslog:info("Mounting %s at %s", fs, physPath)
 	o.proxy = component.proxy(fs)
 	o.physPath = physPath
 	
@@ -46,7 +46,7 @@ end
 
 
 function VFSNode.getDeepestOverlayAt(root, path)
-	assert(not filesystem.path.isRelative(path))
+	assert(not filesystem.path.isRelative(path), path)
 	local base = "/"
 	local curr = root
 	local deepestBase = base
@@ -167,6 +167,13 @@ function filesystem.isFile(path)
 	return not overlay.proxy.isDirectory(relative)
 end
 
+function filesystem.readFile(path)
+	local h = filesystem.open(path, "r")
+	local data = h:readAll()
+	h:close()
+	
+	return data
+end
 
 function handle:new(overlay, path, mode)
 	local o = {
@@ -176,7 +183,7 @@ function handle:new(overlay, path, mode)
 	}
 	setmetatable(o, self)
 	self.__index = self
-	syslog:debug("Opened handle to %s (%s)", path, overlay.proxy.address)
+	syslog:trace("Opened handle to %s (%s)", path, overlay.proxy.address)
 	return o
 end
 
@@ -197,7 +204,7 @@ end
 
 function handle:close()
 	self.overlay.proxy.close(self._handle)
-	syslog:debug("Closed handle to %s (%s)", self.path, self.overlay.proxy.address)
+	syslog:trace("Closed handle to %s (%s)", self.path, self.overlay.proxy.address)
 end
 
 if computer.tmpAddress() then
@@ -211,12 +218,20 @@ local function loadfile(file)
 	return load(data, "=VFS" .. file, "bt", _G)
 end
 
+local function loadfileExt(file, global)
+	local h = filesystem.open(file, "r")
+	local data = h:readAll()
+	h:close()
+	return load(data, "=VFS" .. file, "bt", global or _G)
+end
+
 _G.loadfile = loadfile
+_G.loadfileExt = loadfileExt
 
 table.insert(package.locators, function(pname)
 	local path = "/lib/" .. pname .. ".lua"
 	if filesystem.exists(path) and filesystem.isFile(path) then
-		return loadfile(path)
+		return {filesystem.readFile(path), path}
 	end
 	
 	return nil

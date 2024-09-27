@@ -12,10 +12,7 @@ require("filesystem") -- get the filesystem API loaded so we can finally load th
 table.remove(package.locators, locatorIdx) -- Get that shit outta there we have a REAL filesystem now.
 coroutine.yield()
 local VTerm = require("vterm")
-require("workers").runProgram("/bin/silly.lua")
-coroutine.yieldToOS()
-syslog:info("continuing :)")
-coroutine.yieldToOS()
-syslog:info("and being cooperative")
+local workers = require("workers")
+workers.runProgram("/sbin/dman.lua")
 
 while true do coroutine.yieldToOS() end

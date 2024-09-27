@@ -22,12 +22,18 @@ function eventbus.pump()
 			if eventbus._listeners[kind] ~= nil then
 				local to_remove = {}
 				for k, v in pairs(eventbus._listeners[kind]) do
-					-- Middle argument voided due to being used by the OS!
-					local status, _, status2 = coroutine._nativeResume(v, table.unpack(signal))
-					status = status and status2
-					if not status then
-						table.insert(to_remove, k)
+					while true do
+						-- TODO: Handle OS yields in an event listener more nicely.
+						local status, oyield, status2 = coroutine._nativeResume(v, table.unpack(signal))
+						if oyield or not status then -- If we're a real yield and not an OS yield.
+							status = status and status2
+							if not status then
+								table.insert(to_remove, k)
+							end
+							break
+						end
 					end
+						
 				end
 				
 				local adj = 0
@@ -87,6 +93,8 @@ function eventbus.listen(event, co)
 				args = table.pack(coroutine.yield(co_ref(table.unpack(args))))
 			end
 		end)
+		
+		coroutine.setName(co, "Event listener (" .. event .. ")")
 	end
 	
 	syslog:trace("Attached listener %s to event %s", workers.prettyPrintCoroutine(co), event)
@@ -123,6 +131,6 @@ function eventbus._remove(event, idx)
 	return true
 end
 
-computer.pullEvent = eventbus.pull -- No, don't you dare use the builtin pull to freeze my system.
+computer.pullSignal = eventbus.pull -- No, don't you dare use the builtin pull to freeze my system.
 
 return eventbus

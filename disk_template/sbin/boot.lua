@@ -55,7 +55,7 @@ _, err = xpcall(function()
 	
 	local function runProcess(file, ...)
 		local worker = raw_loadfile(file)
-		_kicosCtx.workers.Worker:new(worker, file, ...)
+		_kicosCtx.workers.Worker:new(worker, file:match("/([^/]+)$"), ...)
 	end
 	
 	runProcess("/slib/startup.lua", raw_loadfile)

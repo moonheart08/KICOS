@@ -8,22 +8,49 @@ local logLevels = {
 	["trace"] = {4, "TRCE"},
 }
 
-local maxLogLevel = 4
+do
+  local keys = {}
+  for k in pairs(logLevels) do
+    table.insert(keys, k)
+  end
+  for _, k in pairs(keys) do
+    logLevels[logLevels[k][1]] = k
+  end
+end
 
-function syslog:setMaxLogLevel(level) 
+
+local maxLogLevel = 3
+
+function syslog.setMaxLogLevel(level) 
 	if level > 4 or level < 0 then
 		error("Log level must be between 0 and 4, inclusive. Got " .. tostring(level))
 	end
 	
 	maxLogLevel = level
+	
+	syslog:info("Set global log level to %s", logLevels[level])
 end
 
 syslog.unsaved = {}
+
+local workers = nil
 
 function syslog:log(level, message, ...)
 	local levelData = logLevels[level]
 	if maxLogLevel < levelData[1] then
 		return -- Be silent.
+	end
+	
+	if require then
+		if not workers then
+			workers = require("workers")
+		end
+		
+		local msg = "[" .. levelData[2] .. "]" .. "[" .. workers.current().name .. "] " .. string.format(message, ...)
+	
+		_G._logVTerm:printText(msg)
+		table.insert(syslog.unsaved, msg)
+		return
 	end
 	
 	local msg = "[" .. levelData[2] .. "] " .. string.format(message, ...)

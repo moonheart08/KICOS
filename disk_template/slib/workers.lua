@@ -42,8 +42,45 @@ function Worker:new(body, name, ...)
 end
 
 function workers.runProgram(file, ...)
-	local contents = loadfile(file)
-	return Worker:new(contents, file, ...)
+	local contents = loadfileExt(file, workers.buildGlobalContext())
+	coroutine.yieldToOS()
+	return Worker:new(contents, file:match("/([^/]+)$"), ...)
+end
+
+function workers.buildGlobalContext()
+	local newContext = {
+		package = package,
+		loadfile = loadfile, 
+		loadfileExt = loadfileExt,
+		load = load,
+		setmetatable = setmetatable,
+		getmetatable = getmetatable,
+		table = table,
+		coroutine = coroutine,
+		math = math,
+		string = string,
+		pairs = pairs,
+		ipairs = ipairs,
+		pcall = pcall,
+		xpcall = xpcall,
+		rawequal = rawequal,
+		rawget = rawget,
+		rawset = rawset,
+		rawlen = rawlen,
+		select = select,
+		tonumber = tonumber,
+		tostring = tostring,
+		type = type,
+		_OSVERSION = _OSVERSION,
+		next = next,
+		error = error,
+		assert = assert,
+		require = require,
+		unicode = unicode,
+		os = os,
+	}
+	newContext._G = newContext
+	return newContext
 end
 
 function workers.runThread(f, name, ...)
@@ -262,6 +299,10 @@ local coroutine = {
 		return true
 	end,
 }
+
+function os.exit(code)
+	workers.current():exit(code or 0)
+end
 
 _G.coroutine = coroutine
 

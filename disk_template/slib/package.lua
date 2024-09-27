@@ -17,6 +17,7 @@ package.loaded = {
 	["string"] = string,
 	["table"] = table,
 	["component"] = component,
+	["computer"] = computer,
 }
 
 package.locators = {}
@@ -25,14 +26,20 @@ package.require = function(pname)
 	if package.loaded[pname] then
 		return package.loaded[pname]
 	end
-	syslog:info("require() grabbing uncached package {%s}", pname)
+	syslog:trace("require() grabbing uncached package {%s}", pname)
 	
 	for _, locator in ipairs(package.locators) do
 		local status, res = pcall(locator, pname)
 		if status and res ~= nil then
-			local pkg = res()
-			package._insert(pname, pkg)
-			return pkg
+			if type(res) == "table" then
+				local pkg = load(res[1], "=VFS" .. res[2], "bt", _kicosCtx.workers.buildGlobalContext())()
+				package._insert(pname, pkg)
+				return pkg
+			else
+				local pkg = res()
+				package._insert(pname, pkg)
+				return pkg
+			end
 		elseif res ~= nil then
 			syslog:warning("Package locator failed, got %s", res)
 		end
