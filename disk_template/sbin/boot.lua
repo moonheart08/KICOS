@@ -22,7 +22,6 @@ _kicosCtx.bootDevice = computer.getBootAddress()
 local syslog = _kicosCtx.syslog
 syslog:info("Survived early boot, VTerms available.")
 syslog:info("Booting from %s", _kicosCtx.bootDevice)
-syslog:debug("Testing really long text: AWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWAWA")
 
 local function sys_errhandler(x)
 	syslog:error("Core thread died!")

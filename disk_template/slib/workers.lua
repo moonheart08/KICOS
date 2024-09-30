@@ -20,20 +20,31 @@ function Worker:new(body, name, ...)
 		local function workerDeathHandler(x)
 			syslog:warning("Worker %s's leader exited with an error!", o)
 			syslog:warning(x)
+			local innerFrames = 3
 			for i in debug.traceback():gmatch("([^\n]+)") do
 				if i:match(".machine:.*") ~= nil then
 				else
-					syslog:warning(i)
+					-- Remove the workers.lua and xpcall frames.
+					if innerFrames > 0 then
+						innerFrames = innerFrames - 1
+					else
+						syslog:warning(i)
+					end
 				end
 
 			end
 		end
 		
-		local res = xpcall(function()
+		local res, err = xpcall(function()
 			return body(table.unpack(workerArgs))
 		end, workerDeathHandler)
 		
-		o:exit(res)
+		if res == true then
+			o:exit("ended")
+		else
+			syslog:info("%s", err or "no error?")
+			o:exit("crashed")
+		end
 	end, o)
 	coroutine.setName(o._leader, "Leader")
 	-- Hashset. Yea this stinks.
@@ -79,6 +90,8 @@ function workers.buildGlobalContext()
 		require = require,
 		unicode = unicode,
 		os = os,
+		bit32 = bit32,
+		utf8 = utf8,
 	}
 	newContext._G = newContext
 	return newContext
@@ -100,9 +113,9 @@ function Worker:_new_empty(name)
 	-- Configure table to have weak values so we don't hang up coroutines forever when they should die.
 	setmetatable(o.coroutines, {__mode = "v"})
 	
-	o.id = workerId
+	o.id = tostring(workerId)
 	workerId = workerId + 1
-	table.insert(workers._worker_list, o)
+	workers._worker_list[o.id] = o
 	o:setname(name)
 	syslog:info("Created %s", o)
 	return o
@@ -118,7 +131,8 @@ function Worker:_assign_coroutine(co)
 	coroutineWorkerMap[co] = data
 end
 
-	
+-- todo: THIS IS BAD AND SHOULD BE PART OF COROUTINES, NOT WORKERS.
+-- IT DOESN'T EVEN WORK PROPERLY WHY DID I WRITE IT THIS WAY.
 function Worker:paused()
 	if self._ev_waiter ~= nil then
 		return self._ev_waiter()
@@ -157,7 +171,7 @@ function Worker:status(long)
 	if long then
 		local status = "" .. tostring(self) .. "\n"
 		status = status .. "Associated coroutines:\n"
-		for k,routine in ipairs(self.coroutines) do
+		for k,routine in pairs(self.coroutines) do
 			status = status .. "  " .. workers.prettyPrintCoroutine(routine) .. "\n"
 		end
 		return status
@@ -182,7 +196,7 @@ end
 
 function workers.top(writer)
 	writer("All workers:")
-	for _, worker in ipairs(workers._worker_list) do
+	for _, worker in pairs(workers._worker_list) do
 		writer(worker:status(true))
 	end
 end
@@ -214,7 +228,7 @@ local coroutine = {
 			return builtin_coroutine.resume(co, ...)
 		end
 		
-		if data.dead then
+		if data.worker.dead or data.dead then
 			return false, "Worker died, cannot process."
 		end
 		
@@ -248,7 +262,7 @@ local coroutine = {
 			return builtin_coroutine.status(co)
 		end
 		
-		if data.dead then
+		if data.worker.dead or data.dead then
 			return "dead"
 		end
 		

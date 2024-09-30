@@ -20,13 +20,19 @@ package.loaded = {
 	["computer"] = computer,
 }
 
+package.fundamental = {}
+
+for k, _ in pairs(package.loaded) do
+	package.fundamental[k] = true
+end
+
 package.locators = {}
 
 package.require = function(pname)
 	if package.loaded[pname] then
 		return package.loaded[pname]
 	end
-	syslog:trace("require() grabbing uncached package {%s}", pname)
+	syslog:info("require() grabbing uncached package {%s}", pname)
 	
 	for _, locator in ipairs(package.locators) do
 		local status, res = pcall(locator, pname)
@@ -50,6 +56,13 @@ end
 
 package._insert = function(pname, t)
 	package.loaded[pname] = t
+end
+
+package.drop = function(pname)
+	assert(not package.fundamental[pname], "Can't drop a fundamental package!")
+	
+	package.loaded[pname] = nil -- ditch it.
+	syslog:warning("Deliberately dropping package %s!", pname)
 end
 
 _G.require = package.require

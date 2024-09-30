@@ -3,6 +3,9 @@ local ev = require("eventbus")
 local syslog = require("syslog")
 local keyboard = require("keyboard")
 local computer = require("computer")
+local workers = require("workers")
+local fs = require("filesystem")
+local util = require("util")
 
 -- Magic key that invokes SYSRQ.
 local sysrqKey = keyboard.keys.pause
@@ -33,12 +36,13 @@ do
 	end
 end
 
-local sysrqRequested = false
 local lastPressedKey = nil
+local lastKeyboard = nil
 
 local keyDownListener = ev.listen("key_down", function(ty, addr, char, code, source)
+	lastKeyboard = addr
 	if code == sysrqKey then
-		sysrqRequested = true
+		ev.push("sysrq")
 		lastPressedKey = nil
 		return true
 	else
@@ -56,43 +60,66 @@ local keyUpListener = ev.listen("key_up", function(ty, addr, char, code, source)
 	return true
 end)
 
+local lastScratch = nil
+
+local sysrqRegistry = {
+	["1"] = function() syslog.setMaxLogLevel(0) end,
+	["2"] = function() syslog.setMaxLogLevel(1) end,
+	["3"] = function() syslog.setMaxLogLevel(2) end,
+	["4"] = function() syslog.setMaxLogLevel(3) end,
+	["5"] = function() syslog.setMaxLogLevel(4) end,
+	["w"] = function() workers.top(function(...) syslog:info(...) end) end,
+	["m"] = function()
+		local max = 0
+		for _=1,40 do
+		  max = math.max(max, computer.freeMemory())
+		  coroutine.yieldToOS() -- let GC happen.
+		end
+		
+		syslog:info("Memory stats: %s / %s", max, computer.totalMemory())
+	end,
+	["c"] = function()
+		for addr, ty in require("component").list() do
+			syslog:info("C %s %s", addr, ty)
+		end
+	end,
+	["s"] = function()
+		if lastScratch then
+			lastScratch:exit(util.exitReasons.killed)
+		end
+		
+		-- run the scratch program.
+		local res, err = pcall(function()
+			fs.invalidateCache("/scratch.lua")
+			lastScratch = workers.runProgram("/scratch.lua")
+		end)
+		
+		if not res then
+			syslog:error("Scratch program failed to load: %s", err)
+		end
+	end,
+	["r"] = function()
+		syslog:info("Reloading drivers.")
+		ev.push("dman_reload")
+	end,
+	["q"] = function()
+		computer.shutdown(true)
+	end,
+}
 
 while true do 
-	if sysrqRequested then
-		syslog:warning("Keyboard waiting on SYSRQ input.")
-		while lastPressedKey == nil do
-			coroutine.yieldToOS()
-		end
-		
-		if lastPressedKey == keyboard.keys.w then
-			require("workers").top(function(...) syslog:info(...) end)
-		elseif lastPressedKey == keyboard.keys.m then
-			local max = 0
-			for _=1,40 do
-			  max = math.max(max, computer.freeMemory())
-			  coroutine.yieldToOS() -- let GC happen.
-			end
-			
-			syslog:info("Memory stats: %s / %s", max, computer.totalMemory())
-		elseif lastPressedKey == keyboard.keys["1"] then
-			syslog.setMaxLogLevel(0)
-		elseif lastPressedKey == keyboard.keys["2"] then
-			syslog.setMaxLogLevel(1)
-		elseif lastPressedKey == keyboard.keys["3"] then
-			syslog.setMaxLogLevel(2)
-		elseif lastPressedKey == keyboard.keys["4"] then
-			syslog.setMaxLogLevel(3)
-		elseif lastPressedKey == keyboard.keys["5"] then
-			syslog.setMaxLogLevel(4)
-		elseif lastPressedKey == keyboard.keys["c"] then
-			for addr, ty in require("component").list() do
-				syslog:info("C %s %s", addr, ty)
-			end
-		else
-			syslog:warning("Unknown SYSRQ {%s}", keyboard.keys[lastPressedKey])
-		end
-		
-		sysrqRequested = false
+	ev.pull(-1, "sysrq")
+	syslog:warning("Keyboard waiting on SYSRQ input.")
+	
+	while lastPressedKey == nil do
+		coroutine.yieldToOS()
 	end
-	coroutine.yieldToOS()
+	
+	local key = keyboard.keys[lastPressedKey]
+	
+	if sysrqRegistry[key] ~= nil then
+		sysrqRegistry[key](key)
+	else
+		syslog:warning("Unknown SYSRQ {%s}", key)
+	end
  end

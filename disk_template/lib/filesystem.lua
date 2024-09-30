@@ -1,7 +1,7 @@
 local syslog = require("syslog")
 local eventbus = require("eventbus")
 local component = require("component")
-syslog:info("Setting up filesystem driver/etc.")
+syslog:info("Setting up filesystem core.")
 local filesystem = {}
 local path = {}
 local Overlay = {}
@@ -190,6 +190,11 @@ function filesystem.readFile(path)
 	h:close()
 	
 	return data
+end
+
+function filesystem.invalidateCache(path)
+	-- Currently does nothing.
+	return true
 end
 
 function handle:new(overlay, path, mode)

@@ -22,18 +22,21 @@ function eventbus.pump()
 			if eventbus._listeners[kind] ~= nil then
 				local to_remove = {}
 				for k, v in pairs(eventbus._listeners[kind]) do
-					while true do
-						-- TODO: Handle OS yields in an event listener more nicely.
-						local status, oyield, status2 = coroutine._nativeResume(v, table.unpack(signal))
-						if oyield or not status then -- If we're a real yield and not an OS yield.
-							status = status and status2
-							if not status then
-								table.insert(to_remove, k)
+					if coroutine.status(v) ~= "dead" then
+						while true do
+							-- TODO: Handle OS yields in an event listener more nicely.
+							local status, oyield, status2 = coroutine._nativeResume(v, table.unpack(signal))
+							if oyield or not status then -- If we're a real yield and not an OS yield.
+								status = status and status2
+								if not status then
+									table.insert(to_remove, k)
+								end
+								break
 							end
-							break
 						end
+					else
+						table.insert(to_remove, k)
 					end
-						
 				end
 				
 				local adj = 0
@@ -48,6 +51,8 @@ function eventbus.pump()
 		
 		i = i + 1
 	end
+	
+	syslog:warning("Eventbus jammed, significant number of events.")
 end
 
 -- Note: Unlike OpenOS, this does not support patterns for the filter!
@@ -130,6 +135,8 @@ function eventbus._remove(event, idx)
 	
 	return true
 end
+
+eventbus.push = computer.pushSignal
 
 computer.pullSignal = eventbus.pull -- No, don't you dare use the builtin pull to freeze my system.
 
