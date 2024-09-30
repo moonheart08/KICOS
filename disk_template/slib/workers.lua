@@ -92,6 +92,7 @@ function workers.buildGlobalContext()
 		os = os,
 		bit32 = bit32,
 		utf8 = utf8,
+		debug = debug,
 	}
 	newContext._G = newContext
 	return newContext

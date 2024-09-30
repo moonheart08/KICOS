@@ -3,8 +3,7 @@
 local syslog = require("syslog")
 local package = require("package")
 package.drop("json") -- Prevent caching the lib we're trying to test.
-package.drop("testing")
-package.drop("util")
+package.drop("doc")
 local asserteq = require("testing").asserteq
 
 local json = require("json")
@@ -19,3 +18,8 @@ asserteq(json._deserialize({}, "[1, 2, 3]"), {1, 2, 3})
 asserteq(json._deserialize({}, "[1, [1, 2], 3]"), {1, {1, 2}, 3})
 asserteq(json._deserialize({}, "{\"foo\" = 1}"), {foo = 1})
 asserteq(json._deserialize({}, "{\"foo\" = 1, \"bar\" = \"baz\"}"), {foo = 1, bar = "baz"})
+
+local test = {array = {1, 2, 3}, str = "among us.\n", table = {foo = "bar", baz = "qux"}}
+local ser = json.serialize(test)
+syslog:info("Serialization test: %s", ser)
+syslog:info("Equal to the original (deserialization)?: %s", require("util").deepCompare(json.deserialize(ser), test))

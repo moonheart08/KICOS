@@ -1,4 +1,4 @@
-local syslog = require("syslog")
+local doc = require("doc")
 
 -- JSON serializer/deserializer. Not OpenOS's serializer! That generates lua, which can be a problem with untrusted inputs.
 -- The parser itself is implemented with recursive descent, and should not be used on very large inputs. 
@@ -19,6 +19,41 @@ local cCloseBracket = string.byte("]", 1)
 local cComma = string.byte(",", 1)
 local cX = string.byte("x", 1)
 local cU = string.byte("u", 1)
+
+-- 
+-- Config {
+--		allowTrailingData = boolean -- Whether or not the text must end after the data.
+-- }
+function json.deserialize(text, cfg)
+	assert(cfg == nil or type(cfg) == "table", "Config must be a table or nil!")
+	assert(type(text) == "string", "Text to deserialize MUST be a string!")
+	
+	cfg = cfg or {}
+	
+	local v, pos = json._deserialize(cfg, text, pos)
+	pos = json._eatWhitespace(text, pos)
+	
+	if cfg.allowTrailingData ~= true then
+		if string.len(text) > pos then
+			json._parseError("Expected end of data stream, but did not find it.", text, pos)
+		end
+	end
+	
+	return v, pos
+end
+
+doc.describe(json.deserialize, "Deserializes JSON text into Lua values, returning the deserialized value and the position of the end of the datastream.",
+{
+	args = { 
+		{"text", "string", "Text to deserialize as JSON."}, 
+		{"cfg", "table", [[Table containing configuration data of this format:
+    Config {
+        allowTrailingData = boolean -- Whether or not the text must end after the data.
+    }]]}
+	},
+	returns = "A lua table constructed from the JSON data, if possible.",
+	throws = "Throws if it encounters a problem when parsing."
+})
 
 function json._deserialize(cfg, text, pos)
 	local t = nil
@@ -72,7 +107,8 @@ local escapeTable = {
 	["f"] = "\f",
 	["n"] = "\n",
 	["r"] = "\r",
-	["t"] = "\t"
+	["t"] = "\t",
+	["\\"] = "\\",
 }
 
 function json._parseString(cfg, text, pos)
@@ -117,8 +153,13 @@ function json._parseArray(cfg, text, pos)
 	local arr = {}
 	
 	while true do
-		pos = pos + 1 -- eat the comma.
+		pos = pos + 1 -- eat the comma. Or opening bracket.
 		local v = nil
+		pos = json._eatWhitespace(text, pos) 
+		if string.byte(text, pos) == cCloseBracket then
+			break
+		end
+		
 		v, pos = json._deserialize(cfg, text, pos)
 		table.insert(arr, v)
 		pos = json._eatWhitespace(text, pos) -- Eat anything trailing the deserialized value.
@@ -210,5 +251,57 @@ function json._guessValueType(cfg, text, pos)
 		json._parseError("Unexpected token " .. string.char(start), text, pos)
 	end
 end
+
+function json._serialize(cfg, value, addto)
+	local vty = type(value)
+	if vty == "number" then
+		return addto .. tostring(value)
+	elseif vty == "string" then
+		return addto .. string.format("%q", value):gsub("\\\n", "\\n")
+	elseif vty == "table" then
+		-- Okay, what kind.
+		local len = #value
+		if len > 0 then -- Okay, assume an array. We can't serialize numeric keys in a table to JSON anyway.
+			addto = addto .. "["
+			
+			for k, v in ipairs(value) do
+				addto = json._serialize(cfg, v, addto)
+				if k ~= len then
+					addto = addto .. ","
+				end
+			end
+			return addto .. "]"
+		else
+			addto = addto .. "{"
+			
+			for k, v in pairs(value) do
+				addto = addto .. string.format("%q", k):gsub("\\\n", "\\n") .. "=" 
+				addto = json._serialize(cfg, v, addto)
+				addto = addto .. ","
+			end
+			
+			addto = string.sub(addto, 1, string.len(addto) - 1) -- Strip trailing comma.
+			
+			return addto .. "}"
+		end
+	else
+		error("Cannot serialize type "..vty)
+	end
+end
+
+function json.serialize(value, cfg)
+	return json._serialize(cfg, value, "")
+end
+
+
+doc.describe(json.serialize, "Serializes a lua table to JSON, if possible.",
+{
+	args = { 
+		{"value", "table", "Table to serialize as JSON."}, 
+		{"cfg", "table?", [[An empty table. No config options yet supported.]]}
+	},
+	returns = "A string representing the lua table as JSON.",
+	throws = "If an unsupported type (not a number, string, or table) is attempted to be serialized.",
+})
 
 return json
