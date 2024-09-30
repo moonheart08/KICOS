@@ -1,2 +1,3 @@
 *.bak
 localbuild.cfg
+*.tar # We don't ship tarballs.
