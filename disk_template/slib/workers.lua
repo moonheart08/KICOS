@@ -142,7 +142,7 @@ function Worker:_new_empty(name)
 	workerId = workerId + 1
 	workers._worker_list[o.id] = o
 	o:setname(name)
-	syslog:info("Created %s", o)
+	syslog:debug("Created %s", o)
 	return o
 end
 
@@ -167,8 +167,9 @@ function Worker:paused()
 end
 
 function Worker:exit(res)
+	assert(not self.dead, "Cannot kill a worker twice!")
 	self.dead = true
-	syslog:info("%s has exited (result %s)",self, res or 0)
+	syslog:debug("%s has exited (result %s)",self, res or 0)
 	workers._worker_list[self.id] = nil -- Sparse, but that's fine.
 	self.onDeath:call(self, res) -- Call the death hook, so listeners are aware.
 								 -- We do this BEFORE removing ourselves from scheduling

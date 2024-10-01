@@ -46,5 +46,54 @@ function util.deepCompare(t1, t2, ignore_mt)
     return true
 end
 
+local serialization = nil
+
+function util.xpcallErrHandlerBuilder(writer)
+	return function(x)
+		writer("ERR: %s", x)
+		local innerFrames = 3
+		for i in debug.traceback():gmatch("([^\n]+)") do
+			if i:match(".machine:.*") ~= nil or i:match(".slib/workers.lua:.*") ~= nil then
+			else
+				-- Remove the workers.lua and xpcall frames.
+				if innerFrames > 0 then
+					innerFrames = innerFrames - 1
+				else
+					writer(i)
+				end
+			end
+
+		end
+	end
+
+end
+
+function util.prettyPrint(x, writer)
+	if not serialization then
+		serialization = require("serialization")
+	end
+	
+	if type(x) ~= "table" then
+		x = {x}
+	end
+	
+	local res, err = xpcall(function()
+		local didSomething = false
+		for i = 1, #x do
+			didSomething = true
+			if x[i] == nil then
+				writer("nil")
+			else
+				writer(serialization.serialize(x[i], true))
+			end
+		end
+		
+		if not didSomething then
+			writer("nil")
+		end
+	end, util.xpcallErrHandlerBuilder(writer))
+	
+	return res, err
+end
 
 return util

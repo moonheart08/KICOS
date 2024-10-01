@@ -51,17 +51,20 @@ local specialKeyMap = {
 	[28] = "\n"
 }
 
+local sysrqIoBlock = false
+
 local keyDownListener = ev.listen("key_down", function(ty, addr, char, code, source)
 	lastKeyboard = addr
 	if code == sysrqKey then
 		ev.push("sysrq")
 		lastPressedKey = nil
+		sysrqIoBlock = true
 		return true
 	else
 		setHeldKey(addr, code, true)
 		lastPressedKey = code
 		syslog:trace("Key pressed: %s (%s)", string.char(char), code)
-		if stdin then
+		if stdin and not sysrqIoBlock then
 			if getControlHeld(addr) then
 				if code == 0x2E then -- CTRL-C
 					stdin.worker:exit("killed")
@@ -162,6 +165,8 @@ while true do
 	while lastPressedKey == nil do
 		coroutine.yieldToOS()
 	end
+	
+	sysrqIoBlock = false
 	
 	local key = keyboard.keys[lastPressedKey]
 	

@@ -50,7 +50,7 @@ package.require = function(pname)
 	if package.loaded[pname] then
 		return package.loaded[pname]
 	end
-	syslog:info("require() grabbing uncached package {%s}", pname)
+	syslog:debug("require() grabbing uncached package {%s}", pname)
 	
 	for _, locator in ipairs(package.locators) do
 		local status, res = xpcall(function() return locator(pname) end, locatorDeathHandler)

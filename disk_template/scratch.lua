@@ -1,2 +1,2 @@
--- This program is executed by SYSRQ + s
--- Useful for testing when the system can't run the shell for whatever reason (for example, it doesn't exist yet.)
+-- This program is executed by SYSRQ + s, or loaded by the lua REPL's `scratch` command.
+-- Useful for testing when the system can't run the shell for whatever reason, or for using your IDE of choice when developing locally.

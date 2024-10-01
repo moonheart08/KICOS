@@ -1,0 +1,1 @@
+print(require("env").env().workingDirectory)

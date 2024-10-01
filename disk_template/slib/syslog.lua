@@ -19,7 +19,7 @@ do
 end
 
 
-local maxLogLevel = 3
+local maxLogLevel = 2
 
 function syslog.setMaxLogLevel(level) 
 	if level > 4 or level < 0 then

@@ -165,7 +165,7 @@ end
 function filesystem.list(path)
 	local overlay, relative, currNode = filesystem.getRelativeBase(path)
 	
-	local half = overlay.proxy.list(relative)
+	local half = overlay.proxy.list(relative) or {}
 	local node, base = VFSNode.getNodeAt(filesystem._root, path, false)
 	if node then
 		for k,_ in pairs(node.children) do

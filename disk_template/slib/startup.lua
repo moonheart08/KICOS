@@ -21,13 +21,16 @@ workers.runProgram("/sbin/dman.lua")
 
 while _OSLOADLEVEL() ~= 3 do coroutine.yieldToOS() end
 
+workers.runProgram("hello").onDeath:await()
+
 while true do
 	local reason
 	
-	workers.runProgram("/bin/shell.lua").onDeath:await(function(worker, r) 
+	workers.runProgram("shell").onDeath:await(function(worker, r) 
 		reason = r 
 		return true
 	end)
+	
 	if reason == require("util").exitReasons.ended then
 		break
 	end
