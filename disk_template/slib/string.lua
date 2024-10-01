@@ -31,5 +31,15 @@ generateReaderForSignedUnsigned("I8", "i8", "read%s%s", "Long", "ULong")
 
 -- Read a string of length len at pos in str.
 function string.readFixedStr(str, pos, len)
-	return string.unpack("<s" .. tostring(len), str, pos)
+	return string.unpack("<c" .. tostring(len), str, pos)
+end
+
+-- Read a string of length len at pos in str.
+function string.readNullStr(str, pos)
+	return string.unpack("<z", str, pos)
+end
+
+function string.readFixedOctal(str, pos, len)
+	local str = string.readFixedStr(str, pos, len)
+	return tonumber(str, 8)
 end

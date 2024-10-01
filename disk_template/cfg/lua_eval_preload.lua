@@ -41,3 +41,18 @@ function hex(str, width)
 	io.write("\n")
 end
 
+__qloadedName = nil
+
+function qload(pack)
+	package.drop(pack)
+	_G[pack] = require(pack)
+	__qloadedName = pack
+end
+
+function qrload()
+	qload(__qloadedName)
+end
+
+function readfile(f)
+	return filesystem.readFile(f)
+end
