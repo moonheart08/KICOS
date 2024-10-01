@@ -55,6 +55,7 @@ _, err = xpcall(function()
 	_kicosCtx.scheduler = raw_loadfile("/slib/scheduler.lua")()
 	_kicosCtx.workers = raw_loadfile("/slib/workers.lua")()
 	_kicosCtx.hooks = raw_loadfile("/slib/hooks.lua")()
+	raw_loadfile("/slib/component.lua")() -- Injection based, don't worry about saving it.
 	
 	local os_worker = _kicosCtx.workers.Worker:_new_empty("KICOS")
 	os_worker:_assign_coroutine(coroutine.running())

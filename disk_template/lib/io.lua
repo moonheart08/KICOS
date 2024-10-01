@@ -58,4 +58,9 @@ function io.read(k, doFocus, echo)
 	end
 end
 
+function io.clearInput()
+	local stdin = pipes.stdin()
+	stdin:clearBuffer()
+end
+
 return io

@@ -1,7 +1,6 @@
 local io = require("io")
 local workers = require("workers")
-
-local prompt = "> "
+local env = require("env").env()
 
 function help()
 	print("KICOS Shell.")
@@ -15,7 +14,7 @@ local builtins = {
 }
 
 while true do
-	io.write(prompt)
+	io.write(env.prompt or "> ")
 	local line = io.read("l")
 	
 	local firstSpace = line:find(" ", 1, true)
@@ -33,6 +32,7 @@ while true do
 			builtins[cmd]()
 		else
 			workers.runProgram(cmd, args).onDeath:await()
+			io.clearInput() -- Ensure we don't read anything that managed to get in our stdin when the new program was running.
 		end
 	end)
 	

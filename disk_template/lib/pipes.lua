@@ -92,6 +92,14 @@ function Pipe:read(a)
 	end
 end
 
+function Pipe:clearBuffer()
+	if self.buffer then
+		self.buffer = ""
+	else
+		error("Cannot clear an unbuffered pipe!")
+	end
+end
+
 function pipes._makeStdout(worker) 
 	local out = Pipe:new(0) -- Unbuffered.
 	

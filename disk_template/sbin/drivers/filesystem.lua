@@ -18,11 +18,17 @@ for addr, ty in component.list("filesystem") do
 end
 
 ev.listen("component_added", function(msg, addr, ty)
+	if ty ~= "filesystem" then
+		return true
+	end
 	queueFSMount(addr, ty)
 	return true
 end)
 
 ev.listen("component_removed", function(msg, addr, ty)
+	if ty ~= "filesystem" then
+		return true
+	end
 	queueFSUnmount(addr, ty)
 	return true
 end)

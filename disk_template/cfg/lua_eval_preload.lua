@@ -1,0 +1,1 @@
+_G.component = require("component")
