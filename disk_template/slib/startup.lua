@@ -12,10 +12,22 @@ local locatorIdx = #package.locators
 require("filesystem") -- get the filesystem API loaded so we can finally load things SANELY.
 table.remove(package.locators, locatorIdx) -- Get that shit outta there we have a REAL filesystem now.
 _OSLOADLEVEL(2)
-syslog.loadReqs()
+
 coroutine.yield()
 local VTerm = require("vterm")
 local workers = require("workers")
 workers.runProgram("/sbin/dman.lua")
 
-while true do coroutine.yieldToOS() end
+while _OSLOADLEVEL() ~= 3 do coroutine.yieldToOS() end
+
+while true do
+	local res = workers.runProgram("/bin/shell.lua").onDeath:await()
+	if res ~= require("util").exitReasons.ended then
+		break
+	end
+	-- Else, keep trying.
+end
+
+syslog:info("Exiting.")
+
+computer.shutdown()

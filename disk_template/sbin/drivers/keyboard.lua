@@ -88,11 +88,12 @@ end)
 
 local stdinFocusListneer = ev.listen("focus_stdin", function(ty, toFocus)
 	stdin = pipes._getStdinById(toFocus)
-	syslog:info("Focusing new stdin %s", toFocus)
+	syslog:trace("Focusing new stdin %s", toFocus)
 	return true
 end)
 
 local lastScratch = nil
+_OSLOADLEVEL(3)
 
 local sysrqRegistry = {
 	["1"] = function() syslog.setMaxLogLevel(0) end,
@@ -137,6 +138,9 @@ local sysrqRegistry = {
 	["q"] = function()
 		computer.shutdown(true)
 	end,
+	["t"] = function()
+		workers.runProgram("/bin/dotests.lua")
+	end
 }
 
 while true do 

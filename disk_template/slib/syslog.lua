@@ -43,7 +43,7 @@ function syslog:log(level, message, ...)
 	end
 	
 	if _OSLOADLEVEL() == 2 and workers and pipes then
-		local msg = "[" .. levelData[2] .. "]" .. "[" .. workers.current().name .. "] " .. string.format(message, ...)
+		local msg = "[" .. levelData[2] .. "]" .. "[" .. workers.current().name .. "] " .. string.format(message, ...)  .. "\n"
 		
 		--pipes.stdout():write(msg)
 		_G._logVTerm:printText(msg)
@@ -51,7 +51,7 @@ function syslog:log(level, message, ...)
 		return
 	end
 	
-	local msg = "[" .. levelData[2] .. "] " .. string.format(message, ...)
+	local msg = "[" .. levelData[2] .. "] " .. string.format(message, ...) .. "\n"
 	
 	_G._logVTerm:printText(msg)
 	table.insert(syslog.unsaved, msg)

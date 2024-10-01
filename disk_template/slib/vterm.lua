@@ -11,9 +11,10 @@ function VTerm:new(screen, gpu)
 		background = 0x000000,
 		foreground = 0xFFBF00,
 		scrollPos = 0,
-		scrollback = {},
+		scrollback = {""},
 		maxScrollback = 64, -- A small number by default for systems with little RAM.
 		physicalScrollPos = 1,
+		horzScrollPos = 1,
 		viewMode = 1, -- 1: Text 2: DirectDraw
 	}
 	setmetatable(o, self)
@@ -93,9 +94,22 @@ function VTerm:printText(text)
 	if not self:isTextMode() then
 		return
 	end
+	
+	if text == "\b" then
+		-- Backspace.
+		self:_backspace()
+		return
+	end
+	
+	local t = {}
+	
+	for v in text:gmatch("([^\n]+)") do
+		table.insert(t, v)
+	end
 
-	for text in text:gmatch("([^\n]+)") do 
-		table.insert(self.scrollback, text)
+	for k, text in ipairs(t) do 
+		self.scrollback[#self.scrollback] = self.scrollback[#self.scrollback] .. text
+		table.insert(self.scrollback, "")
 
 		if (#self.scrollback) > self.maxScrollback then
 			table.remove(self.scrollback, 1) -- Drop the tail.
@@ -104,10 +118,24 @@ function VTerm:printText(text)
 		end
 
 		repeat 
-			local toPrint = text:sub(1, self._width)
+			local amnt = (self._width - self.horzScrollPos) + 1
+			local toPrint = text:sub(1, amnt)
 			self:_printTextInner(toPrint)
-			text = text:sub(self._width, math.maxinteger or math.huge)
+			text = text:sub(amnt, math.maxinteger or math.huge)
+			if text ~= "" then
+				self:_scrollDown()
+			end
 		until text == ""
+		
+		if k < #t then
+			self:_scrollDown()
+		end
+	end
+	
+	if string.sub(text, -1) ~= "\n" then
+		table.remove(self.scrollback, #self.scrollback) --Remove end.
+	else
+		self:_scrollDown()
 	end
 end
 
@@ -122,9 +150,13 @@ function VTerm:redraw()
 		local text = self.scrollback[currPos]
 		if text ~= nil then
 			repeat 
-				local toPrint = text:sub(1, self._width)
+				local amnt = (self._width - self.horzScrollPos) + 1
+				local toPrint = text:sub(1, amnt)
 				self:_printTextInner(toPrint)
-				text = text:sub(self._width, math.maxinteger or math.huge)
+				text = text:sub(amnt, math.maxinteger or math.huge)
+				if text ~= "" then
+					self:_scrollDown()
+				end
 			until text == ""
 		end
 		currPos = currPos + 1
@@ -139,13 +171,24 @@ function VTerm:_printTextInner(text)
 		return -- No GPU then no work.
 	end
 
-	self._gpu.set(1, self.physicalScrollPos, text)
+	self._gpu.set(self.horzScrollPos, self.physicalScrollPos, text)
+	self.horzScrollPos = self.horzScrollPos + string.len(text)
+end
+
+function VTerm:_backspace()
+	self.horzScrollPos = math.max(1, self.horzScrollPos - 1)
+	self._gpu.set(self.horzScrollPos, self.physicalScrollPos, " ")
+end
+
+function VTerm:_scrollDown()
 	if self._height - 1 == self.physicalScrollPos then
 		self._gpu.copy(1, 2, self._width, self._height - 2, 0, -1)
 		self._gpu.fill(1, self._height - 1, self._width, 1, " ")
 	else
 		self.physicalScrollPos = self.physicalScrollPos + 1
 	end
+	
+	self.horzScrollPos = 1
 end
 
 return VTerm

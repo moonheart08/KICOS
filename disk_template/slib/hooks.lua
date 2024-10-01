@@ -69,12 +69,14 @@ end
 -- The optional condition function gets the hook arguments and must return either true (quit waiting) or false (continue)
 function Hook:await(condition)
 	local yielding = true
+	local data = nil
 	
 	condition = condition or function() return true end -- No-op.
 	
 	local entry = self:attach(function(res, ...)
 		if condition(...) then
 			yielding = false
+			data = table.pack(...)
 		end
 		
 		return res
@@ -83,6 +85,7 @@ function Hook:await(condition)
 	while yielding do coroutine.yieldToOS() end
 	
 	self:deattach(entry)
+	return table.unpack(data)
 end
 
 return hooks

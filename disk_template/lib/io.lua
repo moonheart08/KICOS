@@ -10,11 +10,24 @@ function io.write(...)
 	stdout:write(string.format(...))
 end
 
-function io.read(k)
+function io.print(...)
+	local stdout = pipes.stdout()
+	
+	stdout:write(string.format(...) .. "\n")
+end
+
+function io.read(k, doFocus, echo)
 	k = k or "l"
 	
+	if echo == nil then
+		echo = true
+	end
+	
 	local stdin = pipes.stdin()
-	pipes.focusStdin()
+	local stdout = pipes.stdout()
+	if (doFocus == nil) or (doFocus == true) then
+		pipes.focusStdin()
+	end
 	
 	if k == "l" then
 		local b = ""
@@ -22,7 +35,21 @@ function io.read(k)
 		repeat 
 			b = b .. inp
 			inp = stdin:read(1)
-			syslog:trace("Read %s", inp)
+
+			if inp == "\b" then
+				-- Backspace.
+				inp = ""
+				if string.len(b) > 0 then
+					b = string.sub(b, 1, string.len(b) - 1) -- Cut last char.
+					if echo then
+						stdout:write("\b")
+					end
+				end
+			else
+				if echo then
+					stdout:write(inp)
+				end
+			end
 		until inp == "\n"
 		
 		return b

@@ -156,6 +156,12 @@ function filesystem.exists(path)
 	return overlay.proxy.exists(relative)
 end
 
+function filesystem.list(path)
+	local overlay, relative = filesystem.getRelativeBase(path)
+	
+	return overlay.proxy.list(relative)
+end
+
 function filesystem.isDirectory(path)
 	local overlay, relative = filesystem.getRelativeBase(path)
 	
@@ -233,19 +239,42 @@ if computer.tmpAddress() then
 	filesystem.mount(computer.tmpAddress(), "/tmp")
 end
 
-local function loadfile(file)
-	local h = filesystem.open(file, "r")
-	local data = h:readAll()
-	h:close()
-	return load(data, "=VFS" .. file, "bt", _G)
-end
+filesystem.searchPath = {"/bin/%s"}
 
 local function loadfileExt(file, global)
+	if string.sub(file, 1, 1) ~= "/" then
+		-- We need to find it.
+		
+		local newFile = nil
+		
+		for _,v in pairs(filesystem.searchPath) do
+			if filesystem.exists(string.format(v, file)) then
+				newFile = string.format(v, file)
+				break
+			elseif filesystem.exists(string.format(v, file .. ".lua")) then
+				newFile = string.format(v, file .. ".lua")
+				break
+			end
+		end
+		
+		if not newFile then
+			error("Could not locate " .. file .. " in the path when trying to load it.")
+		end
+		
+		file = newFile
+	end
+	
+
 	local h = filesystem.open(file, "r")
 	local data = h:readAll()
 	h:close()
 	return load(data, "=VFS" .. file, "bt", global or _G)
 end
+
+local function loadfile(file)
+	return loadfileExt(file, _G)
+end
+
 
 -- NOTE: This only works because filesystem.lua is loaded so early that package.require can't yet give it its own isolated environment.
 -- NOTE: The OS *will* break into pieces trying to load a process if this ever changes without also fixing this code!

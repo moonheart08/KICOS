@@ -51,7 +51,10 @@ function Worker:new(body, name, ...)
 	return o
 end
 
+local io = nil
+
 function workers.runProgram(file, ...)
+	io = require("io")
 	local contents, err = loadfileExt(file, workers.buildGlobalContext())
 	assert(not err, err)
 	coroutine.yieldToOS()
@@ -93,6 +96,11 @@ function workers.buildGlobalContext()
 		utf8 = utf8,
 		debug = debug,
 		_OSLOADLEVEL = _OSLOADLEVEL,
+		io = io,
+		print = function(...) 
+			io.write(string.format(...) .. "\n")
+		end,
+		
 	}
 	newContext._G = newContext
 	return newContext
@@ -148,12 +156,10 @@ function Worker:exit(res)
 	syslog:info("%s has exited (result %s)",self, res or 0)
 	workers._worker_list[self.id] = nil -- Sparse, but that's fine.
 	
-
-
 	if workers.current() == self then
-		self.onDeath:call(self) -- Call the death hook, so listeners are aware.
-								-- We do this BEFORE removing ourselves from scheduling
-								-- as to not only half-complete the hook if we yield.
+		self.onDeath:call(self, res) -- Call the death hook, so listeners are aware.
+									 -- We do this BEFORE removing ourselves from scheduling
+									 -- as to not only half-complete the hook if we yield.
 		scheduler._scheduled_workers[self] = nil
 		coroutine.yieldToOS()
 	else
