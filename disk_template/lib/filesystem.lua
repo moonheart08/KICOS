@@ -239,15 +239,15 @@ if computer.tmpAddress() then
 	filesystem.mount(computer.tmpAddress(), "/tmp")
 end
 
-filesystem.searchPath = {"/bin/%s"}
-
 local function loadfileExt(file, global)
 	if string.sub(file, 1, 1) ~= "/" then
 		-- We need to find it.
 		
 		local newFile = nil
 		
-		for _,v in pairs(filesystem.searchPath) do
+		local env = require("env").env()
+		
+		for _,v in pairs(env.path) do
 			if filesystem.exists(string.format(v, file)) then
 				newFile = string.format(v, file)
 				break

@@ -16,6 +16,7 @@ _OSLOADLEVEL(2)
 coroutine.yield()
 local VTerm = require("vterm")
 local workers = require("workers")
+require("env")._setupInitialEnv()
 workers.runProgram("/sbin/dman.lua")
 
 while _OSLOADLEVEL() ~= 3 do coroutine.yieldToOS() end

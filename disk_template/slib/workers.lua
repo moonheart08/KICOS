@@ -114,8 +114,17 @@ function Worker:_new_empty(name)
 	local o = {
 		dead = false,
 		_ev_waiter = nil,
+		env = {},
 		onDeath = _kicosCtx.hooks.Hook:new(),
 	}
+	
+	local parent = workers.current()
+	if parent then
+		o.parent = parent
+		for k, v in pairs(parent.env) do
+			o.env[k] = v -- Copy down env.
+		end
+	end
 	
 	setmetatable(o, self)
 	self.__index = self
@@ -207,7 +216,9 @@ end
 
 function workers.current()
 	local curr = coroutine.running()
-	return workers._get_coroutine_data(curr).worker
+	if workers._get_coroutine_data(curr) ~= nil then
+		return workers._get_coroutine_data(curr).worker
+	end
 end
 
 function workers.top(writer)

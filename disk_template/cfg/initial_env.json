@@ -1,0 +1,4 @@
+{
+    "workingDirectory" = "/",
+	"path" = ["/bin/%s"]
+}
