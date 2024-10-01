@@ -36,6 +36,12 @@ do
 		
 		return data.held_keys[code] or false
 	end
+	
+	function getControlHeld(addr)
+		local data = getKeyboardData(addr)
+		
+		return data.held_keys[0x1D] or data.held_keys[0x9D]
+	end
 end
 
 local lastPressedKey = nil
@@ -56,7 +62,13 @@ local keyDownListener = ev.listen("key_down", function(ty, addr, char, code, sou
 		lastPressedKey = code
 		syslog:trace("Key pressed: %s (%s)", string.char(char), code)
 		if stdin then
-			if specialKeyMap[code] then
+			if getControlHeld(addr) then
+				if code == 0x2E then -- CTRL-C
+					stdin.worker:exit("killed")
+				elseif code == 0x20 then
+					stdin:close()
+				end
+			elseif specialKeyMap[code] then
 				local res, err = pcall(function()
 					stdin:tryWrite(specialKeyMap[code])
 				end)

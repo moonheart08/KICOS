@@ -17,6 +17,10 @@ while true do
 	io.write(env.prompt or "> ")
 	local line = io.read("l")
 	
+	if not line then
+		return -- Pipe's closed.
+	end
+	
 	local firstSpace = line:find(" ", 1, true)
 	local cmd = nil
 	local args = ""

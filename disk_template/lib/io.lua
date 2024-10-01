@@ -4,16 +4,20 @@ local syslog = require("syslog")
 
 local io = {}
 
-function io.write(...)
+function io.write(s)
 	local stdout = pipes.stdout()
 	
-	stdout:write(string.format(...))
+	stdout:write(s)
 end
 
 function io.print(...)
 	local stdout = pipes.stdout()
 	
 	stdout:write(string.format(...) .. "\n")
+end
+
+function io.closed()
+	return pipes.stdin().closed
 end
 
 function io.read(k, doFocus, echo)
@@ -27,6 +31,10 @@ function io.read(k, doFocus, echo)
 	local stdout = pipes.stdout()
 	if (doFocus == nil) or (doFocus == true) then
 		pipes.focusStdin()
+	end
+	
+	if stdin.closed then
+		error("Cannot read from a closed pipe!")
 	end
 	
 	if k == "l" then
@@ -50,7 +58,11 @@ function io.read(k, doFocus, echo)
 					stdout:write(inp)
 				end
 			end
-		until inp == "\n"
+		until inp == "\n" or stdin.closed
+		
+		if stdin.closed then
+			return nil
+		end
 		
 		return b
 	else

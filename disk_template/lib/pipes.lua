@@ -30,6 +30,10 @@ end
 
 -- Returns amount read.
 function Pipe:tryWrite(chunk)
+	if self.closed then
+		return false
+	end
+	
 	local res = self.onTryWrite:call(chunk, false)
 	return res or false -- Result or failure, nonblocking.
 end
@@ -53,6 +57,10 @@ end
 
 -- Always writes the entirety, if possible.
 function Pipe:write(chunk)
+	if self.closed then
+		return false
+	end
+
 	local res = 0
 	while true do
 		res = self.onTryWrite:call(chunk, false)
@@ -71,22 +79,28 @@ end
 
 -- Ala UNIX pipes, these only support blocking reads.
 function Pipe:read(a)
+	if self.closed then
+		return ""
+	end
+	
 	if self.buffer then
 		while true do
 			if string.len(self.buffer) > 0 then
 				local out = string.sub(self.buffer, 1, a)
 				self.buffer = string.sub(self.buffer, a + 1, -1)
 				return out
-			else
+			elseif not self.closed then
 				-- Snooze until we got something.
 				self.onTryWrite:await()
+			else
+				return ""
 			end
 		end
 	else
 		local b = nil
 		self.onTryWrite:await(function(res, chunk, blocking) 
 				b = string.sub(chunk, 1, a)
-				return math.min(string.len(chunk), a)
+				return true
 			end)
 		return b
 	end
@@ -98,6 +112,11 @@ function Pipe:clearBuffer()
 	else
 		error("Cannot clear an unbuffered pipe!")
 	end
+end
+
+function Pipe:close()
+	self.closed = true -- die!!!
+	self.onTryWrite:call("", false) -- Ensure awaiters get the memo.
 end
 
 function pipes._makeStdout(worker) 
@@ -117,6 +136,7 @@ function pipes._makeStdout(worker)
 	end)
 	
 	worker.stdout = out
+	out.worker = worker
 	return out
 end
 
@@ -130,6 +150,7 @@ function pipes._makeStdin(worker)
 	
 	worker.stdin = stdin
 	stdin._id = tostring(stdinIds)
+	stdin.worker = worker
 	stdinIds = stdinIds + 1
 	stdins[stdin._id] = stdin
 	return stdin

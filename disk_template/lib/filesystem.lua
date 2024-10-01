@@ -54,7 +54,7 @@ function VFSNode.getDeepestOverlayAt(root, path)
 
 	for segment in filesystem.path.segments(path) do
 		if curr.children[segment] == nil then
-			return deepestOverlay, deepestBase
+			return deepestOverlay, deepestBase, curr
 		end
 		
 		curr = curr.children[segment]
@@ -65,13 +65,19 @@ function VFSNode.getDeepestOverlayAt(root, path)
 		end
 	end
 	
-	return deepestOverlay, deepestBase
+	return deepestOverlay, deepestBase, curr
 end
 
 -- Gets the node at a given path, creating nodes if necessary.
 function VFSNode.getNodeAt(root, path, create)
-	assert(not filesystem.path.isRelative(path))
-	local base = "/"
+	local base
+	
+	if filesystem.path.isRelative(path) then
+		base = ""
+	else
+		base = "/"
+	end
+
 	local curr = root
 	
 	for segment in filesystem.path.segments(path) do
@@ -99,12 +105,12 @@ function path.segments(path)
 	local curPos = 1
 	
 	return function() 
-		local s, e, cap = string.find(path, "/([^/]+)", curPos)
+		local s, e, cap = string.find(path, "([^/]+)", curPos)
 		
 		if s == nil then
 			return nil
 		end
-		curPos = e
+		curPos = e + 2
 		return cap
 	end
 end
@@ -139,10 +145,10 @@ function filesystem.unmount(path)
 end
 
 function filesystem.getRelativeBase(path)
-	local overlay, base = VFSNode.getDeepestOverlayAt(filesystem._root, path)
+	local overlay, base, curr = VFSNode.getDeepestOverlayAt(filesystem._root, path)
 	
 	local baseLen = string.len(base)
-	return overlay, string.sub(path, baseLen)
+	return overlay, string.sub(path, baseLen), curr
 end
 
 function filesystem.open(path, mode)
@@ -157,21 +163,36 @@ function filesystem.exists(path)
 end
 
 function filesystem.list(path)
-	local overlay, relative = filesystem.getRelativeBase(path)
+	local overlay, relative, currNode = filesystem.getRelativeBase(path)
 	
-	return overlay.proxy.list(relative)
+	local half = overlay.proxy.list(relative)
+	local node, base = VFSNode.getNodeAt(filesystem._root, path, false)
+	if node then
+		for k,_ in pairs(node.children) do
+			table.insert(half, k)
+		end
+	end
+	
+	return half
 end
 
 function filesystem.isDirectory(path)
-	local overlay, relative = filesystem.getRelativeBase(path)
+	local overlay, relative, currNode = filesystem.getRelativeBase(path)
 	
-	return overlay.proxy.isDirectory(relative)
+	if overlay.proxy.isDirectory(relative) then
+		return true
+	else
+		local node, base = VFSNode.getNodeAt(currNode, relative, false)
+		if not node then
+			return false
+		else
+			return node.children[relative:sub(base:len())] ~= nil
+		end
+	end
 end
 
 function filesystem.isFile(path)
-	local overlay, relative = filesystem.getRelativeBase(path)
-	
-	return not overlay.proxy.isDirectory(relative)
+	return not filesystem.isDirectory(path)
 end
 
 function filesystem.makeDirectory(path)

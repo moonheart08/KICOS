@@ -42,7 +42,7 @@ function syslog:log(level, message, ...)
 		return -- Be silent.
 	end
 	
-	if _OSLOADLEVEL() == 2 and workers and pipes then
+	if _OSLOADLEVEL() >= 2 and workers and pipes then
 		local msg = "[" .. levelData[2] .. "]" .. "[" .. workers.current().name .. "] " .. string.format(message, ...)  .. "\n"
 		
 		--pipes.stdout():write(msg)

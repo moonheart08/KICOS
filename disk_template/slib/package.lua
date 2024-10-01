@@ -29,6 +29,23 @@ end
 
 package.locators = {}
 
+local function locatorDeathHandler(x)
+	syslog:warning(x)
+	local innerFrames = 3
+	for i in debug.traceback():gmatch("([^\n]+)") do
+		if i:match(".machine:.*") ~= nil then
+		else
+			-- Remove the workers.lua and xpcall frames.
+			if innerFrames > 0 then
+				innerFrames = innerFrames - 1
+			else
+				syslog:warning(i)
+			end
+		end
+
+	end
+end
+
 package.require = function(pname)
 	if package.loaded[pname] then
 		return package.loaded[pname]
@@ -36,7 +53,7 @@ package.require = function(pname)
 	syslog:info("require() grabbing uncached package {%s}", pname)
 	
 	for _, locator in ipairs(package.locators) do
-		local status, res = pcall(locator, pname)
+		local status, res = xpcall(function() return locator(pname) end, locatorDeathHandler)
 		if status and res ~= nil then
 			if type(res) == "table" then
 				local res, err = load(res[1], "=VFS" .. res[2], "bt", _kicosCtx.workers.buildGlobalContext())

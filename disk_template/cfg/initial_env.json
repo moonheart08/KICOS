@@ -2,5 +2,5 @@
     "workingDirectory" = "/",
 	"path" = ["/bin/%s"],
 	"prompt" = "> ",
-	"luaEvalPreload" = {"/cfg/lua_eval_preload.lua"}
+	"luaEvalPreload" = ["/cfg/lua_eval_preload.lua"]
 }

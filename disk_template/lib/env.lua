@@ -14,6 +14,8 @@ function env._setupInitialEnv()
 	local res, e = pcall(json.deserialize, filesystem.readFile("/cfg/initial_env.json"))
 	
 	if not res then
+		syslog:error("FAILED TO LOAD USER PROVIDED INITIAL ENV. FIX IT!")
+		syslog:error("%s", e)
 		-- If we can't load this we explode, though.
 		e = json.deserialize(filesystem.readFile("/lib/initial_env.json"))
 	end

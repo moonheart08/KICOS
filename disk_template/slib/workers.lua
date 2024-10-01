@@ -96,9 +96,15 @@ function workers.buildGlobalContext()
 		utf8 = utf8,
 		debug = debug,
 		_OSLOADLEVEL = _OSLOADLEVEL,
+		_VERSION = _VERSION,
 		io = io,
-		print = function(...) 
-			io.write(string.format(...) .. "\n")
+		print = function(...)
+			local args = table.pack(...)
+			if #args == 1 then
+				io.write(args[1] .. "\n")
+			else
+				io.write(string.format(...) .. "\n")
+			end
 		end,
 		
 	}
@@ -164,14 +170,15 @@ function Worker:exit(res)
 	self.dead = true
 	syslog:info("%s has exited (result %s)",self, res or 0)
 	workers._worker_list[self.id] = nil -- Sparse, but that's fine.
-	
+	self.onDeath:call(self, res) -- Call the death hook, so listeners are aware.
+								 -- We do this BEFORE removing ourselves from scheduling
+								 -- as to not only half-complete the hook if we yield.
 	if workers.current() == self then
-		self.onDeath:call(self, res) -- Call the death hook, so listeners are aware.
-									 -- We do this BEFORE removing ourselves from scheduling
-									 -- as to not only half-complete the hook if we yield.
+
 		scheduler._scheduled_workers[self] = nil
 		coroutine.yieldToOS()
 	else
+		
 		scheduler._scheduled_workers[self] = nil
 	end
 end

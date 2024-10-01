@@ -7,8 +7,11 @@ function makeEnv()
 	local e =  workers.buildGlobalContext() -- Start with a standard worker's context.
 	local preloads = env.luaEvalPreload or {}
 	for _, v in pairs(preloads) do
-		loadfileExt(v, e)
+		print("Preloading %s", v)
+		loadfileExt(v, e)()
 	end
+	
+	return e
 end
 
 local luaEnv = makeEnv()
@@ -17,7 +20,7 @@ local accum = ""
 
 print("KICOS Lua REPL")
 print("Lua version: %s", _VERSION)
-print("Type `exit` to exit.")
+print("Type `exit` or press Ctrl-D to exit.")
 print("Type `refresh` to reset the environment.")
 print("Type `clr` to clear accumulated code in a multi-line input.")
 
@@ -47,6 +50,10 @@ while true do
 	end
 	
 	local line = io.read("l")
+	
+	if not line then
+		return -- Pipe's closed.
+	end
 	
 	if line == "exit" then
 		return
@@ -78,7 +85,7 @@ while true do
 			local res = table.pack(xpcall(code, errHandler))
 			
 			if res[1] then
-				local res, err = pcall(function()
+				local res, err = xpcall(function()
 					local didSomething = false
 					for i = 2, #res do
 						didSomething = true
@@ -92,7 +99,7 @@ while true do
 					if not didSomething then
 						print("nil")
 					end
-				end)
+				end, errHandler)
 				
 				if not res then
 					print("Failed to pretty-print results: %s", err)

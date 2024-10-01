@@ -1,1 +1,3 @@
-_G.component = require("component")
+component = require("component")
+env = require("env")
+json = require("json")

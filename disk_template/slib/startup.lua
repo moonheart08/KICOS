@@ -22,13 +22,17 @@ workers.runProgram("/sbin/dman.lua")
 while _OSLOADLEVEL() ~= 3 do coroutine.yieldToOS() end
 
 while true do
-	local res = workers.runProgram("/bin/shell.lua").onDeath:await()
-	if res ~= require("util").exitReasons.ended then
+	local reason
+	
+	workers.runProgram("/bin/shell.lua").onDeath:await(function(worker, r) 
+		reason = r 
+		return true
+	end)
+	if reason == require("util").exitReasons.ended then
 		break
 	end
 	-- Else, keep trying.
 end
 
 syslog:info("Exiting.")
-
 computer.shutdown()
