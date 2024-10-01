@@ -1,3 +1,4 @@
 *.bak
 localbuild.cfg
 *.tar
+disk.tar

@@ -25,11 +25,14 @@ function eventbus.pump()
 					if coroutine.status(v) ~= "dead" then
 						while true do
 							-- TODO: Handle OS yields in an event listener more nicely.
-							local status, oyield, status2 = coroutine._nativeResume(v, table.unpack(signal))
+							local status, oyield, status2, err = coroutine._nativeResume(v, table.unpack(signal))
 							if oyield or not status then -- If we're a real yield and not an OS yield.
 								status = status and status2
 								if not status then
 									table.insert(to_remove, k)
+								end
+								if not status2 then
+									syslog:warning("Event handler crashed. %s", err)
 								end
 								break
 							end
@@ -83,6 +86,10 @@ end
 
 -- Takes an event to listen to, and a function or coroutine to act as a listener.
 function eventbus.listen(event, co)
+	if event == nil then
+		return
+	end
+
 	local listeners = eventbus._listeners
 	if listeners[event] == nil then
 		listeners[event] = {}
@@ -95,7 +102,14 @@ function eventbus.listen(event, co)
 		co = coroutine.create(function(...)
 			local args = table.pack(...)
 			while true do
-				args = table.pack(coroutine.yield(co_ref(table.unpack(args))))
+				local res = table.pack(pcall(co_ref, table.unpack(args)))
+				if not res[1] then
+					syslog:warning("Listener crashed: %s", res[2])
+					return
+				end
+				
+				table.remove(res, 1)
+				args = table.pack(coroutine.yield(table.unpack(res)))
 			end
 		end)
 		

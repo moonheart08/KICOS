@@ -34,6 +34,7 @@ end
 syslog.unsaved = {}
 
 local workers = nil
+local pipes = nil
 
 function syslog:log(level, message, ...)
 	local levelData = logLevels[level]
@@ -41,13 +42,10 @@ function syslog:log(level, message, ...)
 		return -- Be silent.
 	end
 	
-	if require then
-		if not workers then
-			workers = require("workers")
-		end
-		
+	if _OSLOADLEVEL() == 2 and workers and pipes then
 		local msg = "[" .. levelData[2] .. "]" .. "[" .. workers.current().name .. "] " .. string.format(message, ...)
-	
+		
+		--pipes.stdout():write(msg)
 		_G._logVTerm:printText(msg)
 		table.insert(syslog.unsaved, msg)
 		return
@@ -77,6 +75,11 @@ end
 
 function syslog:trace(message, ...)
 	self:log("trace", message, ...)
+end
+
+function syslog.loadReqs()
+	workers = require("workers")
+	pipes = require("pipes")
 end
 
 return syslog

@@ -10,6 +10,7 @@ package.loaded = {
 	["vterm"] = _kicosCtx.VTerm,
 	["syslog"] = _kicosCtx.syslog,
 	["scheduler"] = _kicosCtx.scheduler,
+	["hooks"] = _kicosCtx.hooks,
 	["kicos"] = _kicosCtx,
 	["math"] = math,
 	["os"] = os,
@@ -38,7 +39,11 @@ package.require = function(pname)
 		local status, res = pcall(locator, pname)
 		if status and res ~= nil then
 			if type(res) == "table" then
-				local pkg = load(res[1], "=VFS" .. res[2], "bt", _kicosCtx.workers.buildGlobalContext())()
+				local res, err = load(res[1], "=VFS" .. res[2], "bt", _kicosCtx.workers.buildGlobalContext())
+				if err then
+					error(string.format("Got error loading package. %s", err))
+				end
+				local pkg = res()
 				package._insert(pname, pkg)
 				return pkg
 			else

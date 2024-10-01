@@ -15,7 +15,8 @@ function scheduler.run()
 		end
 		
 		if not didWork then
-			error("All runnable workers died!")
+			-- Assume we're going to try to debug this, do NOT die.
+			scheduler.pumpEvents()
 		end
 	end
 end

@@ -1,6 +1,6 @@
 -- This program is executed by SYSRQ + s
 -- Useful for testing when the system can't run the shell for whatever reason (for example, it doesn't exist yet.)
-local syslog = require("syslog")
+local io = require("io")
 local package = require("package")
 package.drop("json") -- Prevent caching the lib we're trying to test.
 package.drop("doc")
@@ -21,5 +21,8 @@ asserteq(json._deserialize({}, "{\"foo\" = 1, \"bar\" = \"baz\"}"), {foo = 1, ba
 
 local test = {array = {1, 2, 3}, str = "among us.\n", table = {foo = "bar", baz = "qux"}}
 local ser = json.serialize(test)
-syslog:info("Serialization test: %s", ser)
-syslog:info("Equal to the original (deserialization)?: %s", require("util").deepCompare(json.deserialize(ser), test))
+io.write("Serialization test: %s", ser)
+io.write("Equal to the original (deserialization)?: %s", require("util").deepCompare(json.deserialize(ser), test))
+io.write("type something!")
+local line = io.read("l")
+io.write("You wrote: %s", line)

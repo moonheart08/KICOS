@@ -2,7 +2,14 @@ local raw_loadfile = ...
 local component = component
 
 _G._OSVERSION = "KICOS v0.0.0"
-
+local _loadLevel = 0
+_G._OSLOADLEVEL = function(l) 
+	if l ~= nil then
+		_loadLevel = l
+	else
+		return _loadLevel
+	end
+end
 
 -- All files in slib are safe to load early, and go straight into the exec context.
 _G._kicosCtx = {}
@@ -24,6 +31,7 @@ syslog:info("Survived early boot, VTerms available.")
 syslog:info("Booting from %s", _kicosCtx.bootDevice)
 
 local function sys_errhandler(x)
+	_OSLOADLEVEL(-1)
 	syslog:error("Core thread died!")
 	syslog:error(x)
 	for i in debug.traceback():gmatch("([^\n]+)") do
@@ -46,6 +54,7 @@ _, err = xpcall(function()
 	syslog:info("Booting %s with %s/%s B of RAM", _G._OSVERSION, computer.freeMemory(), computer.totalMemory())
 	_kicosCtx.scheduler = raw_loadfile("/slib/scheduler.lua")()
 	_kicosCtx.workers = raw_loadfile("/slib/workers.lua")()
+	_kicosCtx.hooks = raw_loadfile("/slib/hooks.lua")()
 	
 	local os_worker = _kicosCtx.workers.Worker:_new_empty("KICOS")
 	os_worker:_assign_coroutine(coroutine.running())

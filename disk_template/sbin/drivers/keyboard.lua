@@ -4,11 +4,13 @@ local syslog = require("syslog")
 local keyboard = require("keyboard")
 local computer = require("computer")
 local workers = require("workers")
+local pipes = require("pipes")
 local fs = require("filesystem")
 local util = require("util")
 
 -- Magic key that invokes SYSRQ.
 local sysrqKey = keyboard.keys.pause
+local stdin = nil
 
 do
 	local data = {}
@@ -39,6 +41,10 @@ end
 local lastPressedKey = nil
 local lastKeyboard = nil
 
+local specialKeyMap = {
+	[28] = "\n"
+}
+
 local keyDownListener = ev.listen("key_down", function(ty, addr, char, code, source)
 	lastKeyboard = addr
 	if code == sysrqKey then
@@ -49,6 +55,26 @@ local keyDownListener = ev.listen("key_down", function(ty, addr, char, code, sou
 		setHeldKey(addr, code, true)
 		lastPressedKey = code
 		syslog:trace("Key pressed: %s (%s)", string.char(char), code)
+		if stdin then
+			if specialKeyMap[code] then
+				local res, err = pcall(function()
+					stdin:tryWrite(specialKeyMap[code])
+				end)
+				
+				if not res then
+					syslog:warning("Stdin write failed: %s", err)
+				end
+			elseif char ~= 0 then
+				-- on god if you block the keyboard thread, explode.
+				local res, err = pcall(function()
+					stdin:tryWrite(string.char(char))
+				end)
+				
+				if not res then
+					syslog:warning("Stdin write failed: %s", err)
+				end
+			end
+		end
 	end
 	
 	return true
@@ -57,6 +83,12 @@ end)
 local keyUpListener = ev.listen("key_up", function(ty, addr, char, code, source)
 	setHeldKey(addr, code, false)
 	syslog:trace("Key released: %s (%s)", string.char(char), code)
+	return true
+end)
+
+local stdinFocusListneer = ev.listen("focus_stdin", function(ty, toFocus)
+	stdin = pipes._getStdinById(toFocus)
+	syslog:info("Focusing new stdin %s", toFocus)
 	return true
 end)
 

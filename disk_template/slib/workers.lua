@@ -42,7 +42,6 @@ function Worker:new(body, name, ...)
 		if res == true then
 			o:exit("ended")
 		else
-			syslog:info("%s", err or "no error?")
 			o:exit("crashed")
 		end
 	end, o)
@@ -93,6 +92,7 @@ function workers.buildGlobalContext()
 		bit32 = bit32,
 		utf8 = utf8,
 		debug = debug,
+		_OSLOADLEVEL = _OSLOADLEVEL,
 	}
 	newContext._G = newContext
 	return newContext
@@ -106,6 +106,7 @@ function Worker:_new_empty(name)
 	local o = {
 		dead = false,
 		_ev_waiter = nil,
+		onDeath = _kicosCtx.hooks.Hook:new(),
 	}
 	
 	setmetatable(o, self)
@@ -146,9 +147,17 @@ function Worker:exit(res)
 	self.dead = true
 	syslog:info("%s has exited (result %s)",self, res or 0)
 	workers._worker_list[self.id] = nil -- Sparse, but that's fine.
-	scheduler._scheduled_workers[self] = nil -- If it wasn't already, it is now!
+	
+
+
 	if workers.current() == self then
+		self.onDeath:call(self) -- Call the death hook, so listeners are aware.
+								-- We do this BEFORE removing ourselves from scheduling
+								-- as to not only half-complete the hook if we yield.
+		scheduler._scheduled_workers[self] = nil
 		coroutine.yieldToOS()
+	else
+		scheduler._scheduled_workers[self] = nil
 	end
 end
 

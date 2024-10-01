@@ -247,6 +247,8 @@ local function loadfileExt(file, global)
 	return load(data, "=VFS" .. file, "bt", global or _G)
 end
 
+-- NOTE: This only works because filesystem.lua is loaded so early that package.require can't yet give it its own isolated environment.
+-- NOTE: The OS *will* break into pieces trying to load a process if this ever changes without also fixing this code!
 _G.loadfile = loadfile
 _G.loadfileExt = loadfileExt
 
