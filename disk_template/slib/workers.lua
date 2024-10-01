@@ -58,7 +58,7 @@ function workers.runProgram(file, ...)
 	local contents, err = loadfileExt(file, workers.buildGlobalContext())
 	assert(not err, err)
 	coroutine.yieldToOS()
-	return Worker:new(contents, file:match("/([^/]+)$"), ...)
+	return Worker:new(contents, file:match("/([^/]+)$") or file, ...)
 end
 
 function workers.buildGlobalContext()
