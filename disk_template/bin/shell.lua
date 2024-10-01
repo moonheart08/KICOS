@@ -47,16 +47,18 @@ while true do
 		cmd = line
 	end
 	
-	local res, err = pcall(function()
-		if builtins[cmd] then
-			builtins[cmd](args)
-		else
-			workers.runProgram(cmd, args).onDeath:await()
-			io.clearInput() -- Ensure we don't read anything that managed to get in our stdin when the new program was running.
+	if cmd ~= "" then
+		local res, err = pcall(function()
+			if builtins[cmd] then
+				builtins[cmd](args)
+			else
+				workers.runProgram(cmd, args).onDeath:await()
+				io.clearInput() -- Ensure we don't read anything that managed to get in our stdin when the new program was running.
+			end
+		end)
+		
+		if not res then
+			print("Command failed: %s", err)
 		end
-	end)
-	
-	if not res then
-		print("Command failed: %s", err)
 	end
 end

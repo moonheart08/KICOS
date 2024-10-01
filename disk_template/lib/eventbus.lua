@@ -31,7 +31,7 @@ function eventbus.pump()
 								if not status then
 									table.insert(to_remove, k)
 								end
-								if not status2 then
+								if not status2 and status then
 									syslog:warning("Event handler crashed. %s", err)
 								end
 								break

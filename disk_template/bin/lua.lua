@@ -15,13 +15,14 @@ function makeEnv()
 end
 
 function help()
-	print("exit    | Exit the REPL (ctrl-D also works.)")
-	print("refresh | Rebuilds the global context (_G) from scratch.")
-	print("clr     | Clears accumulated code in a multi-line input.")
-	print("scratch | Loads the scratch file from /scratch.lua, to global `scratch`")
-	print("<code>  | Runs as a lua program.")
-	print("=<code> | Runs as a lua expression, printing the result.")
-	print("help    | Prints this help message.")
+	print("exit     | Exit the REPL (ctrl-D also works.)")
+	print("refresh  | Rebuilds the global context (_G) from scratch.")
+	print("clr      | Clears accumulated code in a multi-line input.")
+	print("scratch  | Loads the scratch file from /scratch.lua, to global `scratch`")
+	print("<code>   | Runs as a lua program.")
+	print("=<code>  | Runs as a lua expression, printing the result.")
+	print("packages | Lists loaded packages.")
+	print("help     | Prints this help message.")
 end
 
 local luaEnv = makeEnv()
@@ -79,6 +80,13 @@ while true do
 			print("%s", err)
 		end
 		luaEnv.scratch = scratch
+	elseif line == "packages" then
+		for k,_ in pairs(package.loaded) do
+			if luaEnv[k] then
+				io.write(k .. " ")
+			end
+		end
+		print("") -- Annnd a newline.
 	else
 		local code, err = nil
 
@@ -104,6 +112,8 @@ while true do
 			
 			if res[1] then
 				table.remove(res, 1)
+				luaEnv.ans = res[1]
+				
 				local res, err = util.prettyPrint(res, print)
 				
 				if not res then

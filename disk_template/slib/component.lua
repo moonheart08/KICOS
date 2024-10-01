@@ -3,3 +3,7 @@ function component.byType(ty)
 		return k
 	end
 end
+
+function component.proxyByType(ty)
+	return component.proxy(component.byType(ty))
+end

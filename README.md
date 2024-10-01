@@ -11,4 +11,6 @@ KICOS is intended to be an actively maintained alternative to OpenOS and Plan9k,
 - Pretty graphics. While good GPU APIs are planned the core experience is focused more on simply being functional.
 - Multi-user support (this is lua, with limited RAM, even just asking for proper process isolation is a tall order and I don't want multi-user without that.)
 - Defending against the hypothetical minecraft computer hacker when I'm writing this for a private minecraft server. (No passwords or encryption, sorry.)
+  - If/when I add full remote management (i.e. over the internet), *that* will have both because it's no longer contained to a private minecraft server.
 - Making money (Who on earth would charge for a minecraft computer pr- Oh. People do that? Wow.)
+- DRM (What???????)
