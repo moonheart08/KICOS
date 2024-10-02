@@ -57,6 +57,8 @@ _, err = xpcall(function()
 	_kicosCtx.hooks = raw_loadfile("/slib/hooks.lua")()
 	raw_loadfile("/slib/component.lua")() -- Injection based, don't worry about saving it.
 	raw_loadfile("/slib/string.lua")() -- Also injection based.
+	raw_loadfile("/slib/table.lua")() -- You get the idea.
+	raw_loadfile("/slib/global.lua")()
 	
 	local os_worker = _kicosCtx.workers.Worker:_new_empty("KICOS")
 	os_worker:_assign_coroutine(coroutine.running())

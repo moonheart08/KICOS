@@ -14,3 +14,9 @@ KICOS is intended to be an actively maintained alternative to OpenOS and Plan9k,
   - If/when I add full remote management (i.e. over the internet), *that* will have both because it's no longer contained to a private minecraft server.
 - Making money (Who on earth would charge for a minecraft computer pr- Oh. People do that? Wow.)
 - DRM (What???????)
+
+## Ported software/code
+Code ported from other repositories is present here under the original license. The following files in the disk template are ports, consult them for the license header:
+- /lib/serialization.lua (OpenOS)
+- /lib/keyboard.lua (OpenOS)
+

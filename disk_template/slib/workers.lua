@@ -106,7 +106,7 @@ function workers.buildGlobalContext()
 				io.write(string.format(...) .. "\n")
 			end
 		end,
-		
+		ypcall = ypcall,
 	}
 	newContext._G = newContext
 	return newContext
@@ -248,7 +248,7 @@ local coroutine = {
 		
 		local new = builtin_coroutine.create(f)
 		worker:_assign_coroutine(new)
-		syslog:trace("Created new coroutine on worker %s", worker)
+		--syslog:trace("Created new coroutine on worker %s", worker)
 		return new
 	end,
 	createNamed = function(f, name)
@@ -348,6 +348,8 @@ local coroutine = {
 		currData.name = name
 		return true
 	end,
+	
+	_native = builtin_coroutine
 }
 
 function os.exit(code)

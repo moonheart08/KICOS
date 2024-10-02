@@ -56,8 +56,8 @@ local sysrqIoBlock = false
 local keyDownListener = ev.listen("key_down", function(ty, addr, char, code, source)
 	lastKeyboard = addr
 	if code == sysrqKey then
-		ev.push("sysrq")
 		lastPressedKey = nil
+		ev.push("sysrq")
 		sysrqIoBlock = true
 		return true
 	else

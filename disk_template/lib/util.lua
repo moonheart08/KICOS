@@ -48,22 +48,24 @@ end
 
 local serialization = nil
 
-function util.xpcallErrHandlerBuilder(writer)
+function util.xpcallErrHandlerBuilder(writer, innerFrames)
+	local out = ""
+	innerFrames = innerFrames or 2
 	return function(x)
-		writer("ERR: %s", x)
-		local innerFrames = 3
+		out = out .. string.format("ERR: %s", x or "")  .. "\n"
 		for i in debug.traceback():gmatch("([^\n]+)") do
-			if i:match(".machine:.*") ~= nil or i:match(".slib/workers.lua:.*") ~= nil then
+			if i:match("^%s+machine%:") ~= nil or i:match("^%s+/slib%/workers%.lua%:") ~= nil then
 			else
-				-- Remove the workers.lua and xpcall frames.
+				-- Remove the util.lua and xpcall frames.
 				if innerFrames > 0 then
 					innerFrames = innerFrames - 1
 				else
-					writer(i)
+					out = out .. string.format(i) .. "\n"
 				end
 			end
 
 		end
+		return out
 	end
 
 end

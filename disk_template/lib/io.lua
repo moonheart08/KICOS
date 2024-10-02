@@ -37,7 +37,7 @@ function io.read(k, doFocus, echo)
 		error("Cannot read from a closed pipe!")
 	end
 	
-	if k == "l" then
+	if k == "l" or k == "L" then -- Read a line, without or with a \n.
 		local b = ""
 		local inp = ""
 		repeat 
@@ -60,7 +60,42 @@ function io.read(k, doFocus, echo)
 			end
 		until inp == "\n" or stdin.closed
 		
-		if stdin.closed then
+		if stdin.closed and b == "" then
+			return nil
+		end
+		
+		if k == "L" and not stdin.closed then
+			b = b .. "\n" -- We got a newline, supposedly.
+		end
+		
+		return b
+	elseif "a" then -- Read until EOF, i.e. closed.
+		local b = ""
+		
+		while true do
+			b = b .. stdin:read(1024)
+			
+			if stdin.closed then
+				break
+			end
+		end
+				
+		if stdin.closed and b == "" then
+			return nil
+		end
+		
+		return b
+	elseif type(k) == "number" then -- Read `k` bytes.
+		local b = ""
+		while k > 0 do
+			b = b .. stdin:read(1)
+			
+			if stdin.closed then
+				break
+			end
+		end
+		
+		if stdin.closed and b == "" then
 			return nil
 		end
 		

@@ -21,13 +21,9 @@ function Hook:call(...)
 		if (v.worker ~= nil) and v.worker.dead then
 			table.insert(deadHooks, k)
 		else
-			local ok, resOrErr = pcall(v.func, res, ...)
-			if not ok then
-				table.insert(deadHooks, k)
-				error(string.format("Hook died: %s", resOrErr))
-			else
-				res = resOrErr
-			end
+			-- While error handling would be *nice* here, Hooks are used in some locations that would need to yield across the hook due to OC or system yields.
+			-- As such, we're just not allowed to have pcall. Shame.
+			res = v.func(res, ...)
 		end
 	end
 	

@@ -119,8 +119,10 @@ while true do
 				if not res then
 					print("Failed to pretty-print results: %s", err)
 				end
+			else
+				print(res[2])
 			end
-		elseif err:match("<eof>") == nil then
+		elseif err:find("<eof>", 1, true) == nil then
 			accum = ""
 			print("ERR %s", err)
 		end

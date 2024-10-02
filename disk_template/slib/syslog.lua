@@ -45,8 +45,8 @@ function syslog:log(level, message, ...)
 	if _OSLOADLEVEL() >= 2 and workers and pipes then
 		local msg = "[" .. levelData[2] .. "]" .. "[" .. workers.current().name .. "] " .. string.format(message, ...)  .. "\n"
 		
-		--pipes.stdout():write(msg)
-		_G._logVTerm:printText(msg)
+		pipes.stdout():write(msg)
+		--_G._logVTerm:printText(msg)
 		table.insert(syslog.unsaved, msg)
 		return
 	end
