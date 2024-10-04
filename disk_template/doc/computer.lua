@@ -3,6 +3,13 @@
 computer = {}
 
 ---@param str string Crash message.
-function computer.crash(str)
+function computer.crash(str) end
 
-end
+---@return CAddress
+function computer.address() end
+
+---@return integer
+function computer.freeMemory() end
+
+---@return number
+function computer.uptime() end

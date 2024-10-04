@@ -19,6 +19,8 @@ KICOS is intended to be an actively maintained alternative to OpenOS and Plan9k,
 Code ported from other repositories is present here under the original license. The following files in the disk template are ports, consult them for the license header:
 - /lib/serialization.lua (OpenOS)
 - /lib/keyboard.lua (OpenOS)
+- /sbin/drivers/modem.lua (Minitel)
+- /lib/minitel.lua (Minitel)
 
 ## Memory usage
 KICOS has a few major memory users, but the largest is simply VDisplays and tracking that much text (as far as I can tell.) 

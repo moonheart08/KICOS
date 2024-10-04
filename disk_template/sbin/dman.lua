@@ -42,7 +42,7 @@ loadDrivers()
 _OSLOADLEVEL(3) -- Yes, we're responsible for indicating the OS is ready for a user.
 
 while true do
-	local e = ev.pull(0, "dman_reload")
+	local e = ev.pull(-1, "dman_reload")
 
 	if e then
 		loadDrivers()

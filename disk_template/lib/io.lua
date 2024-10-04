@@ -1,6 +1,7 @@
 local workers = require("workers")
 local pipes = require("pipes")
 local syslog = require("syslog")
+local fs = require("filesystem")
 
 local io = {}
 
@@ -109,6 +110,10 @@ end
 function io.clearInput()
 	local stdin = pipes.stdin()
 	stdin:clearBuffer()
+end
+
+function io.open(file, mode)
+	return fs.open(file, mode)
 end
 
 return io

@@ -59,6 +59,7 @@ xpcall(function()
 	raw_loadfile("/slib/component.lua")() -- Injection based, don't worry about saving it.
 	raw_loadfile("/slib/string.lua")() -- Also injection based.
 	raw_loadfile("/slib/table.lua")()  -- You get the idea.
+	raw_loadfile("/slib/computer.lua")()
 	raw_loadfile("/slib/global.lua")()
 
 	local os_worker = _kicosCtx.workers.Worker:_new_empty("KICOS")

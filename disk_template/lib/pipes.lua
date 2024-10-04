@@ -128,6 +128,11 @@ function Pipe:close()
 	self.onTryWrite:call("", false) -- Ensure awaiters get the memo.
 end
 
+function Pipe:__close()
+	self:close()
+	self.onTryWrite = nil -- Ditch it.
+end
+
 ---@param worker Worker
 ---@return Stdout
 function pipes._makeStdout(worker)

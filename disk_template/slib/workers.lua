@@ -182,16 +182,6 @@ function Worker:_assign_coroutine(co)
 	coroutineWorkerMap[co] = data
 end
 
--- todo: THIS IS BAD AND SHOULD BE PART OF COROUTINES, NOT WORKERS.
--- IT DOESN'T EVEN WORK PROPERLY WHY DID I WRITE IT THIS WAY.
-function Worker:paused()
-	if self._ev_waiter ~= nil then
-		return self._ev_waiter()
-	end
-
-	return false
-end
-
 ---Exits the worker with the given result.
 ---@param res string|nil
 function Worker:exit(res)
@@ -202,8 +192,10 @@ function Worker:exit(res)
 	self.onDeath:call(self, res)     -- Call the death hook, so listeners are aware.
 	-- We do this BEFORE removing ourselves from scheduling
 	-- as to not only half-complete the hook if we yield.
-	for _, v in pairs(self.coroutines) do
-		coroutine.close(v)
+	if coroutine.close then
+		for _, v in pairs(self.coroutines) do
+			coroutine.close(v)
+		end
 	end
 
 	if workers.current() == self then
@@ -212,6 +204,10 @@ function Worker:exit(res)
 	else
 		scheduler._scheduled_workers[self] = nil
 	end
+end
+
+function Worker:__close()
+	self:exit("killed")
 end
 
 function Worker:__tostring()
@@ -305,6 +301,10 @@ coroutine = {
 	end,
 
 	resume = function(co, ...)
+		local curr = builtin_coroutine.running()
+		local currData = workers._get_coroutine_data(curr)
+		if currData.worker.dead then return false end
+
 		while true do
 			local res = table.pack(builtin_coroutine.resume(co, ...))
 			if res[1] and not res[2] then -- OS yield. Get me outta here.
@@ -317,6 +317,10 @@ coroutine = {
 	end,
 	_nativeResume = builtin_coroutine.resume,
 	yield = function(...)
+		local curr = builtin_coroutine.running()
+		local currData = workers._get_coroutine_data(curr)
+		if currData.worker.dead then return false end
+
 		return builtin_coroutine.yield(true, ...)
 	end,
 	yieldToOS = function()
@@ -326,7 +330,12 @@ coroutine = {
 		end
 	end,
 	running = builtin_coroutine.running,
-	status = builtin_coroutine.status,
+	status = function(co)
+		local currData = workers._get_coroutine_data(co)
+		if currData.worker.dead then return "dead" end
+
+		return builtin_coroutine.status(co)
+	end,
 	wrap = function(f, _worker)
 		local curr = builtin_coroutine.running()
 		local currData = workers._get_coroutine_data(curr)
@@ -366,8 +375,6 @@ coroutine = {
 		currData.name = name
 		return true
 	end,
-
-	close = builtin_coroutine.close,
 
 	_native = builtin_coroutine
 }

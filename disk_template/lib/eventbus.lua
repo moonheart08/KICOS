@@ -5,13 +5,13 @@ local eventbus = {
 
 local syslog = require("syslog")
 local workers = require("workers")
+local ctx = require("kicos")
 
 local native_pull = computer.pullSignal
 local native_push = computer.pushSignal
 
 function eventbus.pump()
 	local i = 0
-
 	while i < eventbus.maxEventsPumped do
 		local signal = table.pack(native_pull(0))
 
@@ -23,7 +23,7 @@ function eventbus.pump()
 				local to_remove = {}
 				for k, v in pairs(eventbus._listeners[kind]) do
 					if coroutine.status(v) ~= "dead" then
-						while true do
+						for i = 1, 16 do
 							-- TODO: Handle OS yields in an event listener more nicely.
 							local status, oyield, status2, err = coroutine._nativeResume(v, table.unpack(signal))
 							if oyield or not status then -- If we're a real yield and not an OS yield.
@@ -35,6 +35,10 @@ function eventbus.pump()
 									syslog:warning("Event handler crashed. %s", err)
 								end
 								break
+							end
+
+							if i == 16 then
+								syslog:error("FUCK")
 							end
 						end
 					else
@@ -50,7 +54,7 @@ function eventbus.pump()
 				end
 			end
 		else
-			return -- out of events to pump
+			return
 		end
 
 		i = i + 1
@@ -62,18 +66,31 @@ end
 -- Note: Unlike OpenOS, this does not support patterns for the filter!
 -- Note 2: Must be called
 function eventbus.pull(timeout, filter, ...)
+	if type(timeout) == "string" then
+		filter = timeout
+		timeout = -1
+	end
+
+	local startTime = computer.uptime()
 	local share = nil
+
+	local d = workers._get_coroutine_data(coroutine.running())
 	local listener = coroutine.createNamed(function(...)
 		share = table.pack(...)
+		d._asleep = false
 		return false
 	end, string.format("Poll listener (%s)", filter))
 
 	eventbus.listen(filter, listener)
 
-	while share == nil do coroutine.yieldToOS() end -- Yield to the OS scheduler.
+	if timeout < 0 then
+		d._asleep = true
+	end
+
+	while share == nil and ((computer.uptime() < startTime + timeout) or timeout < 0) do coroutine.yieldToOS() end -- Yield to the OS scheduler.
 
 	---@diagnostic disable-next-line: param-type-mismatch
-	return table.unpack(share)
+	return table.unpack(share or {})
 end
 
 -- Takes an event to listen to, and a function or coroutine to act as a listener.
@@ -142,7 +159,10 @@ function eventbus._remove(event, idx)
 	return true
 end
 
-eventbus.push = computer.pushSignal
+eventbus.push = function(...)
+	ctx.scheduler.pumpNow = true
+	return computer.pushSignal(...)
+end
 
 computer.pullSignal = eventbus.pull -- No, don't you dare use the builtin pull to freeze my system.
 

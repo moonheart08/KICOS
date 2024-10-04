@@ -157,7 +157,11 @@ end
 
 function filesystem.open(path, mode)
 	local overlay, relative = filesystem.getRelativeBase(path)
-	return handle:new(overlay, relative, mode)
+	if overlay.proxy.exists(relative) then
+		return handle:new(overlay, relative, mode)
+	end
+
+	return nil
 end
 
 function filesystem.exists(path)
@@ -218,6 +222,9 @@ end
 
 function filesystem.readFile(path)
 	local h = filesystem.open(path, "r")
+	if not h then
+		return nil
+	end
 	local data = h:readAll()
 	h:close()
 
@@ -242,6 +249,7 @@ function handle:new(overlay, path, mode)
 end
 
 function handle:read(amount)
+	amount = amount or math.maxinteger
 	local buffer = ""
 	repeat
 		local data = self.overlay.proxy.read(self._handle, amount - string.len(buffer))
