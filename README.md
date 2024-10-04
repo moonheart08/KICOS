@@ -2,7 +2,7 @@
 KICOS is intended to be an actively maintained alternative to OpenOS and Plan9k, for personal usage.
 
 ## Goals
-- Decently space and memory efficient (Comfortable operation on 2x Tier 1 RAM is the performance target. Unfortunately 1x runs into issues with the source code being too large.)
+- Decently space and memory efficient (Comfortable operation on 2x Tier 2 RAM is the performance target. See [Memory usage](#memory-usage) for why Tier 1 doesn't work.)
 - Not obfuscated or packed in any way for easy introspection and debugging.
 - Networked shell and remote control support (eventually...)
 - Remote logging and management for larger bases.
@@ -20,3 +20,6 @@ Code ported from other repositories is present here under the original license. 
 - /lib/serialization.lua (OpenOS)
 - /lib/keyboard.lua (OpenOS)
 
+## Memory usage
+KICOS has a few major memory users, but the largest is simply VDisplays and tracking that much text (as far as I can tell.) 
+I don't want to reduce this for personal usability reasons, and Tier 2 memory is affordable even in GTNH (the pack this is being written for) so i'm not too concerned.
