@@ -1,7 +1,7 @@
 local raw_loadfile = ...
 local component = component
 
-_G._OSVERSION = "KICOS v0.0.1"
+_G._OSVERSION = "KICOS v0.0.2"
 local _loadLevel = 0
 _G._OSLOADLEVEL = function(l)
 	if l ~= nil then
