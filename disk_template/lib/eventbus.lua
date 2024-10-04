@@ -1,5 +1,5 @@
 local eventbus = {
-	maxEventsPumped = 16,
+	maxEventsPumped = 32,
 	_listeners = {}
 }
 
@@ -11,7 +11,7 @@ local native_push = computer.pushSignal
 
 function eventbus.pump()
 	local i = 0
-	
+
 	while i < eventbus.maxEventsPumped do
 		local signal = table.pack(native_pull(0))
 
@@ -41,46 +41,48 @@ function eventbus.pump()
 						table.insert(to_remove, k)
 					end
 				end
-				
+
 				local adj = 0
 				for _, v in ipairs(to_remove) do
-					syslog:trace("Removed listener %s from event %s", workers.prettyPrintCoroutine(eventbus._listeners[kind][v]), kind)
+					syslog:trace("Removed listener %s from event %s",
+						workers.prettyPrintCoroutine(eventbus._listeners[kind][v]), kind)
 					eventbus._listeners[kind][v] = nil
 				end
 			end
 		else
 			return -- out of events to pump
 		end
-		
+
 		i = i + 1
 	end
-	
+
 	syslog:warning("Eventbus jammed, significant number of events.")
 end
 
 -- Note: Unlike OpenOS, this does not support patterns for the filter!
--- Note 2: Must be called 
+-- Note 2: Must be called
 function eventbus.pull(timeout, filter, ...)
 	local curr = _kicosCtx.workers.current()
 	local share = nil
-	local listener = coroutine.createNamed(function(...) 
+	local listener = coroutine.createNamed(function(...)
 		share = table.pack(...)
 		return false
-	end, string.format("EVBus listener (%s)", filter))
-	
+	end, string.format("Poll listener (%s)", filter))
+
 	eventbus.listen(filter, listener)
-	
-	curr._ev_waiter = function() 
+
+	curr._ev_waiter = function()
 		if share == nil then
 			return true
 		end
-		
+
 		curr._ev_waiter = nil
 		return false
 	end
-	
+
 	coroutine.yieldToOS() -- Yield to the OS scheduler.
-	
+
+	---@diagnostic disable-next-line: param-type-mismatch
 	return table.unpack(share)
 end
 
@@ -94,9 +96,9 @@ function eventbus.listen(event, co)
 	if listeners[event] == nil then
 		listeners[event] = {}
 	end
-	
+
 	local t = listeners[event]
-	
+
 	if type(co) == "function" then
 		local co_ref = co
 		co = coroutine.create(function(...)
@@ -107,17 +109,17 @@ function eventbus.listen(event, co)
 					syslog:warning("Listener crashed: %s", res[2])
 					return
 				end
-				
+
 				table.remove(res, 1)
 				args = table.pack(coroutine.yield(table.unpack(res)))
 			end
 		end)
-		
+
 		coroutine.setName(co, "Event listener (" .. event .. ")")
 	end
-	
+
 	syslog:trace("Attached listener %s to event %s", workers.prettyPrintCoroutine(co), event)
-	
+
 	t[tostring(co)] = co
 	return tostring(co)
 end
@@ -127,13 +129,13 @@ function eventbus.remove(event, co, idx)
 	if listeners[event] == nil then
 		return false
 	end
-	
+
 	local t = listeners[event]
-	
+
 	if t[idx] ~= co then
 		return false
 	end
-	
+
 	return eventbus._remove(event, idx)
 end
 
@@ -142,11 +144,11 @@ function eventbus._remove(event, idx)
 	if listeners[event] == nil then
 		return false
 	end
-	
+
 	local t = listeners[event]
-	
+
 	t[idx] = nil
-	
+
 	return true
 end
 

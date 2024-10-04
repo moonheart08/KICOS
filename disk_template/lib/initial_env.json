@@ -1,5 +1,7 @@
 {
-    "workingDirectory" = "/",
-	"path" = ["/bin/%s"],
-	"prompt" = "> "
+	"workingDirectory": "/",
+	"path": [
+		"/bin/%s"
+	],
+	"prompt": "> "
 }

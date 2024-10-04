@@ -6,12 +6,14 @@ local VTerm = {}
 
 local vtermId = 1
 
+---@deprecated VTerms are deprecated. Use a VT100 from graphics.
+---@see VT100
 function VTerm:new(screen, gpu)
 	local o = {
 		background = 0x000000,
 		foreground = 0xFFBF00,
 		scrollPos = 0,
-		scrollback = {""},
+		scrollback = { "" },
 		maxScrollback = 64, -- A small number by default for systems with little RAM.
 		physicalScrollPos = 1,
 		horzScrollPos = 1,
@@ -19,26 +21,26 @@ function VTerm:new(screen, gpu)
 	}
 	setmetatable(o, self)
 	self.__index = self
-	
+
 	if type(screen) == 'string' then
 		screen = component.proxy(screen)
 	end
-	
+
 	if type(gpu) == 'string' then
 		gpu = component.proxy(gpu)
 	end
-	
+
 	o.vtermId = vtermId
 	vtermId = vtermId + 1
-	
+
 	screen.turnOn() -- Ensure the display is, y'know, actually on.
-	
+
 	if gpu ~= nil then
 		local w, h = gpu.maxResolution()
 		o._width = w
 		o._height = h
 	end
-	
+
 	o._screen = screen
 	o._gpu = gpu
 	o:clear()
@@ -46,22 +48,21 @@ function VTerm:new(screen, gpu)
 	return o
 end
 
--- Returns whether or not the VTerm will block on write 
+-- Returns whether or not the VTerm will block on write
 function VTerm:willBlock()
 	return true -- Don't yet support not blocking.
 end
 
 -- Prep the GPU for drawing to our display, from scratch.
 function VTerm:_prepForDraw()
-	-- No GPU, no draw. 
+	-- No GPU, no draw.
 	if self._gpu == nil then
-		
 		return false
 	end
 	if self._gpu.getScreen() == self._screen.address then
 		return true -- Already set up.
 	end
-	
+
 	return self:_prepForDrawInner()
 end
 
@@ -70,15 +71,15 @@ function VTerm:_prepForDrawInner()
 	self._gpu.setBackground(self.background)
 	self._gpu.setForeground(self.foreground)
 	self._gpu.fill(1, self._height, self._width, self._height, " ")
-	self._gpu.set(1,self._height,"VTERM "..tostring(self.vtermId))
+	self._gpu.set(1, self._height, "EARLY BOOT")
 	return true
 end
 
 function VTerm:clear()
 	self:_prepForDraw()
-	
+
 	self._gpu.fill(1, 1, self._width, self._height, " ")
-	self._gpu.set(1,self._height,"VTERM "..tostring(self.vtermId))
+	self._gpu.set(1, self._height, "EARLY BOOT")
 end
 
 function VTerm:unbind()
@@ -94,20 +95,20 @@ function VTerm:printText(text)
 	if not self:isTextMode() then
 		return
 	end
-	
+
 	if text == "\b" then
 		-- Backspace.
 		self:_backspace()
 		return
 	end
-	
+
 	local t = {}
-	
+
 	for v in text:gmatch("([^\n]+)") do
 		table.insert(t, v)
 	end
 
-	for k, text in ipairs(t) do 
+	for k, text in ipairs(t) do
 		self.scrollback[#self.scrollback] = self.scrollback[#self.scrollback] .. text
 		table.insert(self.scrollback, "")
 
@@ -117,7 +118,7 @@ function VTerm:printText(text)
 			self.scrollPos = self.scrollPos + 1
 		end
 
-		repeat 
+		repeat
 			local amnt = (self._width - self.horzScrollPos) + 1
 			local toPrint = text:sub(1, amnt)
 			self:_printTextInner(toPrint)
@@ -126,12 +127,12 @@ function VTerm:printText(text)
 				self:_scrollDown()
 			end
 		until text == ""
-		
+
 		if k < #t then
 			self:_scrollDown()
 		end
 	end
-	
+
 	if string.sub(text, -1) ~= "\n" then
 		table.remove(self.scrollback, #self.scrollback) --Remove end.
 	else
@@ -145,11 +146,11 @@ function VTerm:redraw()
 	-- And draw our scrollback, starting from scrollPos
 	local endPos = self.scrollPos
 	local currPos = math.min(1, endPos - self._height)
-	
+
 	while currPos ~= (endPos + 1) do
 		local text = self.scrollback[currPos]
 		if text ~= nil then
-			repeat 
+			repeat
 				local amnt = (self._width - self.horzScrollPos) + 1
 				local toPrint = text:sub(1, amnt)
 				self:_printTextInner(toPrint)
@@ -161,7 +162,7 @@ function VTerm:redraw()
 		end
 		currPos = currPos + 1
 	end
-	
+
 	_kicosCtx.syslog:debug("Fully redrew VTerm %s.", self.vtermId)
 end
 
@@ -182,12 +183,14 @@ end
 
 function VTerm:_scrollDown()
 	if self._height - 1 == self.physicalScrollPos then
-		self._gpu.copy(1, 2, self._width, self._height - 2, 0, -1)
-		self._gpu.fill(1, self._height - 1, self._width, 1, " ")
+		if self._gpu then
+			self._gpu.copy(1, 2, self._width, self._height - 2, 0, -1)
+			self._gpu.fill(1, self._height - 1, self._width, 1, " ")
+		end
 	else
 		self.physicalScrollPos = self.physicalScrollPos + 1
 	end
-	
+
 	self.horzScrollPos = 1
 end
 

@@ -35,6 +35,10 @@ end)
 
 fs.ensureDirectory("/mnt")
 
+local args = ...
+
+args:call() -- Tell driver manager to move along.
+
 while true do
 	if #msgs > 0 then
 		while #msgs > 0 do

@@ -7,8 +7,10 @@ function string.cmatch(s, pattern)
 	return c
 end
 
+-- TODO: while this is nice for me, it's incompatible with annotated docs. :(
+
 local function generateReaderForSignedUnsigned(unsigned, signed, fnName, tyNameSigned, tyNameUnsigned)
-	for _, v in ipairs({{"LE", "<"}, {"BE", ">"}}) do
+	for _, v in ipairs({ { "LE", "<" }, { "BE", ">" } }) do
 		local signedFmt = v[2] .. signed
 		string[string.format(fnName, v[1], tyNameSigned)] = function(str, pos)
 			return string.unpack(signedFmt, str, pos)

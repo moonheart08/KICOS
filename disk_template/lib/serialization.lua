@@ -1,15 +1,15 @@
 -- Copyright (c) 2013-2015 Florian "Sangar" Nücke
--- 
+--
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
 -- in the Software without restriction, including without limitation the rights
 -- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 -- copies of the Software, and to permit persons to whom the Software is
 -- furnished to do so, subject to the following conditions:
--- 
+--
 -- The above copyright notice and this permission notice shall be included in
 -- all copies or substantial portions of the Software.
--- 
+--
 -- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 -- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 -- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -29,12 +29,30 @@ local local_pairs = function(tbl)
 end
 
 -- Deliberately pulled up and out of serialize to avoid creating a new one every time the function is called.
-local kw =  {["and"]=true, ["break"]=true, ["do"]=true, ["else"]=true,
-		   ["elseif"]=true, ["end"]=true, ["false"]=true, ["for"]=true,
-		   ["function"]=true, ["goto"]=true, ["if"]=true, ["in"]=true,
-		   ["local"]=true, ["nil"]=true, ["not"]=true, ["or"]=true,
-		   ["repeat"]=true, ["return"]=true, ["then"]=true, ["true"]=true,
-		   ["until"]=true, ["while"]=true}
+local kw = {
+  ["and"] = true,
+  ["break"] = true,
+  ["do"] = true,
+  ["else"] = true,
+  ["elseif"] = true,
+  ["end"] = true,
+  ["false"] = true,
+  ["for"] = true,
+  ["function"] = true,
+  ["goto"] = true,
+  ["if"] = true,
+  ["in"] = true,
+  ["local"] = true,
+  ["nil"] = true,
+  ["not"] = true,
+  ["or"] = true,
+  ["repeat"] = true,
+  ["return"] = true,
+  ["then"] = true,
+  ["true"] = true,
+  ["until"] = true,
+  ["while"] = true
+}
 
 -- Important: pretty formatting will allow presenting non-serializable values
 -- but may generate output that cannot be unserialized back.
@@ -55,11 +73,11 @@ function serialization.serialize(value, pretty)
         table.insert(result_pack, tostring(current_value))
       end
     elseif t == "string" then
-      table.insert(result_pack, (string.format("%q", current_value):gsub("\\\n","\\n")))
+      table.insert(result_pack, (string.format("%q", current_value):gsub("\\\n", "\\n")))
     elseif
-      t == "nil" or
-      t == "boolean" or
-      pretty and (t ~= "table" or (getmetatable(current_value) or {}).__tostring) then
+        t == "nil" or
+        t == "boolean" or
+        pretty and (t ~= "table" or (getmetatable(current_value) or {}).__tostring) then
       table.insert(result_pack, tostring(current_value))
     elseif t == "table" then
       if ts[current_value] then
@@ -105,6 +123,7 @@ function serialization.serialize(value, pretty)
         f = table.pack(local_pairs(current_value))
       end
       local i = 1
+      ---@type boolean|nil
       local first = true
       table.insert(result_pack, "{")
       for k, v in table.unpack(f) do
@@ -141,6 +160,7 @@ function serialization.serialize(value, pretty)
   local result = table.concat(result_pack)
   if pretty then
     local limit = type(pretty) == "number" and pretty or 10
+    ---@type integer|nil
     local truncate = 0
     while limit > 0 and truncate do
       truncate = string.find(result, "\n", truncate + 1, true)
@@ -154,8 +174,7 @@ function serialization.serialize(value, pretty)
 end
 
 function serialization.unserialize(data)
-  checkArg(1, data, "string")
-  local result, reason = load("return " .. data, "=data", nil, {math={huge=math.huge}})
+  local result, reason = load("return " .. data, "=data", nil, { math = { huge = math.huge } })
   if not result then
     return nil, reason
   end

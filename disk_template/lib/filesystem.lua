@@ -8,21 +8,22 @@ local Overlay = {}
 local VFSNode = {}
 local handle = {}
 filesystem.path = path
-filesystem.Overlay = overlay
+filesystem.Overlay = Overlay
 
 function Overlay:new(fs, physPath)
+	---@class Overlay
 	local o = {
 		readonly = false,
 		label = fs,
 	}
-	
+
 	setmetatable(o, self)
 	self.__index = self
-	
+
 	syslog:info("Mounting %s at %s", fs, physPath)
 	o.proxy = component.proxy(fs)
 	o.physPath = physPath
-	
+
 	return o
 end
 
@@ -31,19 +32,19 @@ local root = Overlay:new(computer.getBootAddress(), "/")
 
 -- A directory within the VFS, with an optional overlay to use at that level.
 function VFSNode:new(name, overlay)
+	---@class VFSNode
 	local o = {
 		name = name,
 		overlay = overlay,
 		children = {},
 		parent = nil
 	}
-	
+
 	setmetatable(o, self)
 	self.__index = self
 	syslog:trace("Made new VFS node %s", name)
 	return o
 end
-
 
 function VFSNode.getDeepestOverlayAt(root, path)
 	assert(not filesystem.path.isRelative(path), path)
@@ -56,7 +57,7 @@ function VFSNode.getDeepestOverlayAt(root, path)
 		if curr.children[segment] == nil then
 			return deepestOverlay, deepestBase, curr
 		end
-		
+
 		curr = curr.children[segment]
 		base = base .. segment .. "/"
 		if curr.overlay ~= nil then
@@ -64,14 +65,16 @@ function VFSNode.getDeepestOverlayAt(root, path)
 			deepestOverlay = curr.overlay
 		end
 	end
-	
+
 	return deepestOverlay, deepestBase, curr
 end
 
--- Gets the node at a given path, creating nodes if necessary.
+--- Gets the node at a given path, creating nodes if necessary.
+---@return VFSNode, string
+---@return nil
 function VFSNode.getNodeAt(root, path, create)
 	local base
-	
+
 	if filesystem.path.isRelative(path) then
 		base = ""
 	else
@@ -79,21 +82,22 @@ function VFSNode.getNodeAt(root, path, create)
 	end
 
 	local curr = root
-	
+
 	for segment in filesystem.path.segments(path) do
 		if curr.children[segment] == nil then
 			if create then
 				curr.children[segment] = VFSNode:new(segment, nil)
 				curr.children[segment].parent = root
 			else
-				return nil
+				---@diagnostic disable-next-line: return-type-mismatch
+				return nil, nil
 			end
 		end
-		
+
 		curr = curr.children[segment]
 		base = base .. segment .. "/"
 	end
-	
+
 	return curr, base
 end
 
@@ -103,10 +107,10 @@ end
 
 function path.segments(path)
 	local curPos = 1
-	
-	return function() 
+
+	return function()
 		local s, e, cap = string.find(path, "([^/]+)", curPos)
-		
+
 		if s == nil then
 			return nil
 		end
@@ -115,16 +119,16 @@ function path.segments(path)
 	end
 end
 
-filesystem._root = VFSNode:new("ROOT", root) 
+filesystem._root = VFSNode:new("ROOT", root)
 
 function filesystem.mount(fs, path)
 	local node = VFSNode.getNodeAt(filesystem._root, path, true)
 	if node == nil then
 		return false
 	end
-	
+
 	node.overlay = Overlay:new(fs, path)
-	
+
 	return true
 end
 
@@ -134,19 +138,19 @@ function filesystem.unmount(path)
 	if node == nil then
 		return false
 	end
-	
+
 	if node.overlay == nil then
 		return false
 	end
-	
+
 	node.overlay = nil
-	
+
 	return true
 end
 
 function filesystem.getRelativeBase(path)
 	local overlay, base, curr = VFSNode.getDeepestOverlayAt(filesystem._root, path)
-	
+
 	local baseLen = string.len(base)
 	return overlay, string.sub(path, baseLen), curr
 end
@@ -158,27 +162,28 @@ end
 
 function filesystem.exists(path)
 	local overlay, relative = filesystem.getRelativeBase(path)
-	
+
 	return overlay.proxy.exists(relative)
 end
 
 function filesystem.list(path)
 	local overlay, relative, currNode = filesystem.getRelativeBase(path)
-	
+
 	local half = overlay.proxy.list(relative) or {}
+	half = table.asSet(half)
 	local node, base = VFSNode.getNodeAt(filesystem._root, path, false)
 	if node then
-		for k,_ in pairs(node.children) do
-			table.insert(half, k)
+		for k, _ in pairs(node.children) do
+			half[k .. "/"] = true
 		end
 	end
-	
-	return half
+
+	return table.setAsList(half)
 end
 
 function filesystem.isDirectory(path)
 	local overlay, relative, currNode = filesystem.getRelativeBase(path)
-	
+
 	if overlay.proxy.isDirectory(relative) then
 		return true
 	else
@@ -197,16 +202,16 @@ end
 
 function filesystem.makeDirectory(path)
 	local overlay, relative = filesystem.getRelativeBase(path)
-	
+
 	return overlay.proxy.makeDirectory(relative)
 end
 
 function filesystem.ensureDirectory(path)
 	local overlay, relative = filesystem.getRelativeBase(path)
-	
+
 	if filesystem.exists(path) then
-		return filesystem.isDirectory(path) 
-	else 
+		return filesystem.isDirectory(path)
+	else
 		return filesystem.makeDirectory(path)
 	end
 end
@@ -215,7 +220,7 @@ function filesystem.readFile(path)
 	local h = filesystem.open(path, "r")
 	local data = h:readAll()
 	h:close()
-	
+
 	return data
 end
 
@@ -243,7 +248,7 @@ function handle:read(amount)
 		buffer = buffer .. (data or "")
 		coroutine.yieldToOS()
 	until not data or (string.len(buffer) == amount)
-	
+
 	return buffer
 end
 
@@ -263,12 +268,12 @@ end
 local function loadfileExt(file, global)
 	if string.sub(file, 1, 1) ~= "/" then
 		-- We need to find it.
-		
+
 		local newFile = nil
-		
+
 		local env = require("env").env()
-		
-		for _,v in pairs(env.path) do
+
+		for _, v in pairs(env.path) do
 			if filesystem.exists(string.format(v, file)) then
 				newFile = string.format(v, file)
 				break
@@ -277,14 +282,14 @@ local function loadfileExt(file, global)
 				break
 			end
 		end
-		
+
 		if not newFile then
 			error("Could not locate " .. file .. " in the path when trying to load it.")
 		end
-		
+
 		file = newFile
 	end
-	
+
 
 	local h = filesystem.open(file, "r")
 	local data = h:readAll()
@@ -305,9 +310,9 @@ _G.loadfileExt = loadfileExt
 table.insert(package.locators, function(pname)
 	local path = "/lib/" .. pname .. ".lua"
 	if filesystem.exists(path) and filesystem.isFile(path) then
-		return {filesystem.readFile(path), path}
+		return { filesystem.readFile(path), path }
 	end
-	
+
 	return nil
 end)
 

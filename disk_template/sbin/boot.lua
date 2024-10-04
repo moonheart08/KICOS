@@ -3,7 +3,7 @@ local component = component
 
 _G._OSVERSION = "KICOS v0.0.1"
 local _loadLevel = 0
-_G._OSLOADLEVEL = function(l) 
+_G._OSLOADLEVEL = function(l)
 	if l ~= nil then
 		_loadLevel = l
 	else
@@ -21,7 +21,7 @@ local screen = component.list("screen", true)()
 local gpu = screen and component.list("gpu", true)()
 
 _G._logVTerm = VTerm:new(screen, gpu)
-
+_G._kicosCtx._logVTerm = _logVTerm -- aAAAA
 
 _kicosCtx.syslog = raw_loadfile("/slib/syslog.lua")()
 _kicosCtx.bootDevice = computer.getBootAddress()
@@ -39,17 +39,18 @@ local function sys_errhandler(x)
 		else
 			syslog:error(i)
 		end
-
 	end
 end
 
 local real_crash = computer.crash
+-- Deliberate override.
+---@diagnostic disable-next-line: duplicate-set-field
 function computer.crash(reason)
-	sys_errhandler(x)
+	sys_errhandler(reason)
 	real_crash(reason)
 end
 
-_, err = xpcall(function() 
+xpcall(function()
 	syslog:info("Entering protected context.")
 	syslog:info("Booting %s with %s/%s B of RAM", _G._OSVERSION, computer.freeMemory(), computer.totalMemory())
 	_kicosCtx.scheduler = raw_loadfile("/slib/scheduler.lua")()
@@ -57,21 +58,20 @@ _, err = xpcall(function()
 	_kicosCtx.hooks = raw_loadfile("/slib/hooks.lua")()
 	raw_loadfile("/slib/component.lua")() -- Injection based, don't worry about saving it.
 	raw_loadfile("/slib/string.lua")() -- Also injection based.
-	raw_loadfile("/slib/table.lua")() -- You get the idea.
+	raw_loadfile("/slib/table.lua")()  -- You get the idea.
 	raw_loadfile("/slib/global.lua")()
-	
+
 	local os_worker = _kicosCtx.workers.Worker:_new_empty("KICOS")
 	os_worker:_assign_coroutine(coroutine.running())
-	
+
 	syslog:info("Entering scheduler.")
-	
+
 	local function runProcess(file, ...)
 		local worker = raw_loadfile(file)
 		_kicosCtx.workers.Worker:new(worker, file:match("/([^/]+)$"), ...)
 	end
-	
+
 	runProcess("/slib/startup.lua", raw_loadfile)
-	
+
 	_kicosCtx.scheduler.run()
 end, sys_errhandler)
-

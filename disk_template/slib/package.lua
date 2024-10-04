@@ -1,13 +1,13 @@
+_kicosCtx = _kicosCtx
+
 local syslog = _kicosCtx.syslog
 syslog:info("Setting up package management.")
 
 local package = {}
 package.loaded = {
 	["_G"] = _G,
-	["bit32"] = bit32,
 	["coroutine"] = coroutine,
 	["workers"] = _kicosCtx.workers,
-	["vterm"] = _kicosCtx.VTerm,
 	["syslog"] = _kicosCtx.syslog,
 	["scheduler"] = _kicosCtx.scheduler,
 	["hooks"] = _kicosCtx.hooks,
@@ -42,7 +42,6 @@ local function locatorDeathHandler(x)
 				syslog:warning(i)
 			end
 		end
-
 	end
 end
 
@@ -51,14 +50,14 @@ package.require = function(pname)
 		return package.loaded[pname]
 	end
 	syslog:debug("require() grabbing uncached package {%s}", pname)
-	
+
 	for _, locator in ipairs(package.locators) do
 		local status, res = xpcall(function() return locator(pname) end, locatorDeathHandler)
 		if status and res ~= nil then
 			if type(res) == "table" then
 				local res, err = load(res[1], "=VFS" .. res[2], "bt", _kicosCtx.workers.buildGlobalContext())
-				if err then
-					error(string.format("Got error loading package. %s", err))
+				if not res then
+					error(string.format("Got error loading package. %s", err or ""))
 				end
 				local pkg = res()
 				package._insert(pname, pkg)
@@ -72,7 +71,7 @@ package.require = function(pname)
 			syslog:warning("Package locator failed, got %s", res)
 		end
 	end
-	
+
 	error("Couldn't locate package " .. pname)
 end
 
@@ -82,7 +81,7 @@ end
 
 package.drop = function(pname)
 	assert(not package.fundamental[pname], "Can't drop a fundamental package!")
-	
+
 	package.loaded[pname] = nil -- ditch it.
 	syslog:warning("Deliberately dropping package %s!", pname)
 end

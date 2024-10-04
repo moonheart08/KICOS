@@ -7,6 +7,9 @@ local workers = require("workers")
 local pipes = require("pipes")
 local fs = require("filesystem")
 local util = require("util")
+local args = ...
+
+args:call() -- Tell driver manager to move along.
 
 -- Magic key that invokes SYSRQ.
 local sysrqKey = keyboard.keys.pause
@@ -14,32 +17,32 @@ local stdin = nil
 
 do
 	local data = {}
-	
+
 	function getKeyboardData(addr)
 		if data[addr] == nil then
 			data[addr] = {
 				held_keys = {}
 			}
 		end
-		
+
 		return data[addr]
 	end
-	
+
 	function setHeldKey(addr, code, state)
 		local data = getKeyboardData(addr)
-		
+
 		data.held_keys[code] = state
 	end
-	
+
 	function getKeyState(addr, code)
 		local data = getKeyboardData(addr)
-		
+
 		return data.held_keys[code] or false
 	end
-	
+
 	function getControlHeld(addr)
 		local data = getKeyboardData(addr)
-		
+
 		return data.held_keys[0x1D] or data.held_keys[0x9D]
 	end
 end
@@ -53,12 +56,12 @@ local specialKeyMap = {
 
 local sysrqIoBlock = false
 
-local keyDownListener = ev.listen("key_down", function(ty, addr, char, code, source)
+ev.listen("key_down", function(ty, addr, char, code, source)
 	lastKeyboard = addr
 	if code == sysrqKey then
 		lastPressedKey = nil
-		ev.push("sysrq")
 		sysrqIoBlock = true
+		ev.push("sysrq")
 		return true
 	else
 		setHeldKey(addr, code, true)
@@ -75,7 +78,7 @@ local keyDownListener = ev.listen("key_down", function(ty, addr, char, code, sou
 				local res, err = pcall(function()
 					stdin:tryWrite(specialKeyMap[code])
 				end)
-				
+
 				if not res then
 					syslog:warning("Stdin write failed: %s", err)
 				end
@@ -84,31 +87,30 @@ local keyDownListener = ev.listen("key_down", function(ty, addr, char, code, sou
 				local res, err = pcall(function()
 					stdin:tryWrite(string.char(char))
 				end)
-				
+
 				if not res then
 					syslog:warning("Stdin write failed: %s", err)
 				end
 			end
 		end
 	end
-	
+
 	return true
 end)
 
-local keyUpListener = ev.listen("key_up", function(ty, addr, char, code, source)
+ev.listen("key_up", function(ty, addr, char, code, source)
 	setHeldKey(addr, code, false)
 	syslog:trace("Key released: %s (%s)", string.char(char), code)
 	return true
 end)
 
-local stdinFocusListneer = ev.listen("focus_stdin", function(ty, toFocus)
+ev.listen("focus_stdin", function(ty, toFocus)
 	stdin = pipes._getStdinById(toFocus)
 	syslog:trace("Focusing new stdin %s", toFocus)
 	return true
 end)
 
 local lastScratch = nil
-_OSLOADLEVEL(3)
 
 local sysrqRegistry = {
 	["1"] = function() syslog.setMaxLogLevel(0) end,
@@ -119,11 +121,11 @@ local sysrqRegistry = {
 	["w"] = function() workers.top(function(...) syslog:info(...) end) end,
 	["m"] = function()
 		local max = 0
-		for _=1,40 do
-		  max = math.max(max, computer.freeMemory())
-		  coroutine.yieldToOS() -- let GC happen.
+		for _ = 1, 40 do
+			max = math.max(max, computer.freeMemory())
+			coroutine.yieldToOS() -- let GC happen.
 		end
-		
+
 		syslog:info("Memory stats: %s / %s", max, computer.totalMemory())
 	end,
 	["c"] = function()
@@ -135,13 +137,13 @@ local sysrqRegistry = {
 		if lastScratch then
 			lastScratch:exit(util.exitReasons.killed)
 		end
-		
+
 		-- run the scratch program.
 		local res, err = pcall(function()
 			fs.invalidateCache("/scratch.lua")
 			lastScratch = workers.runProgram("/scratch.lua")
 		end)
-		
+
 		if not res then
 			syslog:error("Scratch program failed to load: %s", err)
 		end
@@ -155,24 +157,32 @@ local sysrqRegistry = {
 	end,
 	["t"] = function()
 		workers.runProgram("/bin/dotests.lua")
-	end
+	end,
+	["f1"] = function() require("graphics").switchToVDisplay(1) end,
+	["f2"] = function() require("graphics").switchToVDisplay(2) end,
+	["f3"] = function() require("graphics").switchToVDisplay(3) end,
+	["f4"] = function() require("graphics").switchToVDisplay(4) end,
+	["f5"] = function() require("graphics").switchToVDisplay(5) end,
+	["f6"] = function() require("graphics").switchToVDisplay(6) end,
+	["f7"] = function() require("graphics").switchToVDisplay(7) end,
+	["f8"] = function() require("graphics").switchToVDisplay(8) end,
 }
 
-while true do 
+while true do
 	ev.pull(-1, "sysrq")
 	syslog:warning("Keyboard waiting on SYSRQ input.")
-	
+
 	while lastPressedKey == nil do
 		coroutine.yieldToOS()
 	end
-	
+
 	sysrqIoBlock = false
-	
+
 	local key = keyboard.keys[lastPressedKey]
-	
+
 	if sysrqRegistry[key] ~= nil then
 		sysrqRegistry[key](key)
 	else
 		syslog:warning("Unknown SYSRQ {%s}", key)
 	end
- end
+end

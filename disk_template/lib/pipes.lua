@@ -5,26 +5,35 @@ local syslog = require("syslog")
 local kicosG = require("_G") -- man, gross.
 
 local pipes = {}
+---@class Pipe
+---@field writeProxy fun(...)
+---@field buffer string | nil
+---@field bufferSize integer
+---@field onTryWrite Hook
 local Pipe = {}
 pipes.Pipe = Pipe
 
--- Only use unbuffered (size 0) pipes if you know what you're doing!
+---Only use unbuffered (size 0) pipes if you know what you're doing!
+---@param bufferSize integer?
+---@return Pipe
 function Pipe:new(bufferSize)
 	bufferSize = bufferSize or 1024
-	local o = {
-		writeProxy = function(...) o:write(...) end,
-		onTryWrite = hooks.Hook:new()
+	local o
+	---@type Pipe
+	o = {
+		writeProxy = function(...) return o:write(...) end,
+		onTryWrite = hooks.Hook:new(),
+		bufferSize = bufferSize,
 	}
-	
+
 	setmetatable(o, self)
 	self.__index = self
-	
+
 	if bufferSize > 0 then
 		o.buffer = ""
-		o.bufferSize = bufferSize
 		o.onTryWrite:attach(Pipe._buffer(o), true) -- Attach workerless, so the pipe doesn't just stop buffering if the worker that made it dies.
 	end
-	
+
 	return o
 end
 
@@ -33,7 +42,7 @@ function Pipe:tryWrite(chunk)
 	if self.closed then
 		return false
 	end
-	
+
 	local res = self.onTryWrite:call(chunk, false)
 	return res or false -- Result or failure, nonblocking.
 end
@@ -44,13 +53,13 @@ function Pipe._buffer(pipe)
 			return res
 		end
 		local clen = string.len(chunk)
-		local avail = pipe.bufferSize - string.len(pipe.buffer) 
+		local avail = pipe.bufferSize - string.len(pipe.buffer)
 		if avail == 0 then
 			return 0
 		end
 		local bite = string.sub(chunk, 1, avail)
 		pipe.buffer = pipe.buffer .. bite
-		
+
 		return avail
 	end
 end
@@ -72,7 +81,7 @@ function Pipe:write(chunk)
 		else
 			return res or false
 		end
-		
+
 		coroutine.yieldToOS()
 	end
 end
@@ -82,7 +91,7 @@ function Pipe:read(a)
 	if self.closed then
 		return ""
 	end
-	
+
 	if self.buffer then
 		while true do
 			if string.len(self.buffer) > 0 then
@@ -98,10 +107,10 @@ function Pipe:read(a)
 		end
 	else
 		local b = nil
-		self.onTryWrite:await(function(res, chunk, blocking) 
-				b = string.sub(chunk, 1, a)
-				return true
-			end)
+		self.onTryWrite:await(function(res, chunk, blocking)
+			b = string.sub(chunk, 1, a)
+			return true
+		end)
 		return b
 	end
 end
@@ -115,26 +124,30 @@ function Pipe:clearBuffer()
 end
 
 function Pipe:close()
-	self.closed = true -- die!!!
+	self.closed = true           -- die!!!
 	self.onTryWrite:call("", false) -- Ensure awaiters get the memo.
 end
 
-function pipes._makeStdout(worker) 
+---@param worker Worker
+---@return Stdout
+function pipes._makeStdout(worker)
+	---@class Stdout: Pipe
+	---@field _stdoutHook HookEntry
 	local out = Pipe:new(0) -- Unbuffered.
-	
-	out._stdoutHook = out.onTryWrite:attach(function(res, chunk, blocking) 
-		if worker.stdoutTarget ~= nil and worker.stdoutTarget.write ~= nil and worker.stdoutTarget.tryWrite ~= nil then
+
+	out._stdoutHook = out.onTryWrite:attach(function(res, chunk, blocking)
+		if worker.env.stdoutTarget ~= nil and worker.env.stdoutTarget.write ~= nil and worker.env.stdoutTarget.tryWrite ~= nil then
 			if blocking then
-				return worker.stdoutTarget:write(chunk)
+				return worker.env.stdoutTarget:write(chunk)
 			else
-				return worker.stdoutTarget:tryWrite(chunk)
+				return worker.env.stdoutTarget:tryWrite(chunk)
 			end
 		else
 			kicosG._logVTerm:printText(chunk)
 			return true
 		end
 	end)
-	
+
 	worker.stdout = out
 	out.worker = worker
 	return out
@@ -142,12 +155,17 @@ end
 
 local stdins = {}
 local stdinIds = 1
-setmetatable(stdins, {__mode = "v"})
+setmetatable(stdins, { __mode = "v" })
 
-
+---comment
+---@param worker Worker
+---@return Stdin
 function pipes._makeStdin(worker)
+	---@class Stdin: Pipe
+	---@field _id string
+	---@field worker Worker
 	local stdin = Pipe:new(1024) -- 1024B input buffer.
-	
+
 	worker.stdin = stdin
 	stdin._id = tostring(stdinIds)
 	stdin.worker = worker
@@ -156,6 +174,8 @@ function pipes._makeStdin(worker)
 	return stdin
 end
 
+---@param worker Worker?
+---@return Stdin
 function pipes.stdin(worker)
 	worker = worker or workers.current()
 	if not worker.stdin then
@@ -176,6 +196,8 @@ function pipes._getStdinById(id)
 	return stdins[id]
 end
 
+---@param worker Worker?
+---@return Stdout
 function pipes.stdout(worker)
 	worker = worker or workers.current()
 	if not worker.stdout then

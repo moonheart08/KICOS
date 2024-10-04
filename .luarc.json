@@ -1,0 +1,10 @@
+{
+    "doc": {
+        "privateName": [
+            "%_.*"
+        ]
+    },
+    "runtime": {
+        "version": "Lua 5.3"
+    }
+}

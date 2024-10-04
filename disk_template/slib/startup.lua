@@ -9,28 +9,36 @@ table.insert(package.locators, function(pname)
 	return raw_loadfile("/lib/" .. pname .. ".lua")
 end)
 local locatorIdx = #package.locators
-require("filesystem") -- get the filesystem API loaded so we can finally load things SANELY.
+require("filesystem")                      -- get the filesystem API loaded so we can finally load things SANELY.
 table.remove(package.locators, locatorIdx) -- Get that shit outta there we have a REAL filesystem now.
 _OSLOADLEVEL(2)
 
 coroutine.yield()
-local VTerm = require("vterm")
 local workers = require("workers")
+syslog.loadReqs()
 require("env")._setupInitialEnv()
 workers.runProgram("/sbin/dman.lua")
 
 while _OSLOADLEVEL() ~= 3 do coroutine.yieldToOS() end
 
+local graphics = require("graphics")
+
+local shellDisplay = graphics.VDisplay:newWithVT()
+
+shellDisplay:switchTo()
+
+workers.current().env.stdoutTarget = shellDisplay:getPipeInput()
+
 workers.runProgram("hello").onDeath:await()
 
 while true do
 	local reason
-	
-	workers.runProgram("shell").onDeath:await(function(worker, r) 
-		reason = r 
+
+	workers.runProgram("shell").onDeath:await(function(worker, r)
+		reason = r
 		return true
 	end)
-	
+
 	if reason == require("util").exitReasons.ended then
 		break
 	end

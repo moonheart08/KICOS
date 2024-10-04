@@ -4,7 +4,7 @@ local fs = require("filesystem")
 local syslog = require("syslog")
 local ev = require("eventbus")
 local util = require("util")
-
+local Hook = require("hooks").Hook
 
 local drivers = {}
 
@@ -13,11 +13,11 @@ local function loadDrivers()
 	for _, v in pairs(drivers) do
 		v:exit(util.exitReasons.killed)
 	end
-	
-	for _,v in pairs(drivers) do
+
+	for _, v in pairs(drivers) do
 		assert(v.dead)
 	end
-	
+
 	drivers = {}
 	assert(#drivers == 0)
 
@@ -30,16 +30,20 @@ local function loadDrivers()
 	for k, _ in pairs(uniqueTy) do
 		local path = "/sbin/drivers/" .. k .. ".lua"
 		if fs.exists(path) then
-			table.insert(drivers, workers.runProgram(path))
+			local barrier = Hook:new()
+			local worker = workers.runProgram(path, barrier)
+			table.insert(drivers, worker)
+			barrier:await()
 		end
 	end
 end
 
 loadDrivers()
+_OSLOADLEVEL(3) -- Yes, we're responsible for indicating the OS is ready for a user.
 
-while true do 
+while true do
 	local e = ev.pull(0, "dman_reload")
-	
+
 	if e then
 		loadDrivers()
 	end

@@ -2,3 +2,4 @@
 localbuild.cfg
 *.tar
 disk.tar
+workspace/*
