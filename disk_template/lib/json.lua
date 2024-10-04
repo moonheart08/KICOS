@@ -169,6 +169,10 @@ function json._parseTable(cfg, text, pos)
 		-- Discard the opening {, then eat whitespace.
 		pos = json._eatWhitespace(text, pos + 1)
 
+		if string.byte(text, pos) == cCloseBrace then
+			break
+		end
+
 		local key = nil
 		local ok = nil
 		ok, key, pos = pcall(json._parseString, cfg, text, pos)

@@ -185,7 +185,7 @@ function start()
         pruneCache()
         if pport == cfg.port or pport == 0 then -- for linked cards
             syslog:debug("%s, %s, %s, %s", cfg.port, vPort, packetType, dest)
-            if checkPCache(packetID) then return end
+            if checkPCache(packetID) then return true end
             minitel.friends[sender] = computer.uptime()
             if dest == hostname then
                 if packetType == 1 then

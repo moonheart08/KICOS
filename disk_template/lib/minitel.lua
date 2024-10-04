@@ -37,7 +37,7 @@ function net.rsend(to, port, data, block)
     computer.pushSignal("net_send", 1, to, port, data, pid)
     if block then return pid end
     repeat
-        _, rpid = event.pull(0.5, "net_ack")
+        _, rpid = event.pull(math.min(stime - computer.uptime(), 0.5), "net_ack")
     until rpid == pid or computer.uptime() > stime
     if not rpid then return false end
     return true

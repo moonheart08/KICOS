@@ -27,11 +27,11 @@ function eventbus.pump()
 							-- TODO: Handle OS yields in an event listener more nicely.
 							local status, oyield, status2, err = coroutine._nativeResume(v, table.unpack(signal))
 							if oyield or not status then -- If we're a real yield and not an OS yield.
-								status = status and status2
-								if not status then
+								nstat = status and status2
+								if not nstat then
 									table.insert(to_remove, k)
 								end
-								if not status2 and status then
+								if not status then
 									syslog:warning("Event handler crashed. %s", err)
 								end
 								break
