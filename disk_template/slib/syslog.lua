@@ -30,7 +30,7 @@ for k, v in component.list() do
 	end
 end
 
-local maxLogLevel = 2
+local maxLogLevel = 3
 
 function syslog.setMaxLogLevel(level)
 	if level > 4 or level < 0 then

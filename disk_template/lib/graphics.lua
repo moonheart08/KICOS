@@ -271,7 +271,7 @@ function VT100:new(gpu, screen)
         width = gpu.width,
         height = gpu.height - 1,
         scrollbackHeight = 128,
-        statline = "STATLINE",
+        statline = "",
         inPipe = pipes.Pipe:new(),
         outPipe = pipes.Pipe:new(),
         _shadowDisplay = {},
@@ -314,7 +314,7 @@ end
 
 ---Fully redraws the VT100 emulator, from scratch.
 function VT100:redraw()
-    local display = self.gpu.displayBuffer
+    local display = self:getDisplay()
 
     if not display then
         return -- Can't draw if we're not up front.
@@ -324,8 +324,6 @@ function VT100:redraw()
         self:_redrawLine(i - self._scrollPos, i)
     end
 
-
-
     display:setLine(1, self.height + 1, self.statline)
 end
 
@@ -333,7 +331,7 @@ function VT100:_redrawLine(visualPos, scrollPos)
     local line = self._shadowDisplay[scrollPos]
     local colorData = self._shadowColorCommands[scrollPos]
 
-    local display = self.gpu.displayBuffer
+    local display = self:getDisplay()
 
     if not display then
         return
@@ -384,7 +382,7 @@ function VT100:_setChar(x, y, c)
     l = l:sub(1, x - 1) .. c .. l:sub(x + 1, -1)
     self._shadowDisplay[shadowLineBase + y - 1] = l
 
-    local display = self.gpu.displayBuffer
+    local display = self:getDisplay()
 
     if display then
         display:setLine(x, y, c)
@@ -410,7 +408,7 @@ function VT100:_newline(resetCursor)
     if self._cursorY ~= self.height then
         self._cursorY = self._cursorY + 1
     else
-        local display = self.gpu.displayBuffer
+        local display = self:getDisplay()
 
         if display then
             display:copy(1, 2, self.width, self.height - 1, 0, -1)
@@ -433,6 +431,12 @@ function VT100:_workerThread()
         if chunk ~= "" then
             self:processInput(chunk)
         end
+    end
+end
+
+function VT100:getDisplay()
+    if self._drawState then
+        return self.gpu.displayBuffer
     end
 end
 
@@ -494,7 +498,7 @@ local activeVDisplay = nil
 
 function VDisplay:switchTo()
     if activeVDisplay then
-        self._backing:setDrawState(false)
+        activeVDisplay._backing:setDrawState(false)
     end
     activeVDisplay = self
     self._backing:setDrawState(true)
@@ -505,6 +509,10 @@ function graphics.switchToVDisplay(id)
     if graphics._vdisplays[id] then
         graphics._vdisplays[id]:switchTo()
     end
+end
+
+function graphics.currentVDisplay()
+    return activeVDisplay
 end
 
 graphics.GPU = GPU

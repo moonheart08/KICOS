@@ -62,7 +62,6 @@ end
 -- Note: Unlike OpenOS, this does not support patterns for the filter!
 -- Note 2: Must be called
 function eventbus.pull(timeout, filter, ...)
-	local curr = _kicosCtx.workers.current()
 	local share = nil
 	local listener = coroutine.createNamed(function(...)
 		share = table.pack(...)
@@ -71,16 +70,7 @@ function eventbus.pull(timeout, filter, ...)
 
 	eventbus.listen(filter, listener)
 
-	curr._ev_waiter = function()
-		if share == nil then
-			return true
-		end
-
-		curr._ev_waiter = nil
-		return false
-	end
-
-	coroutine.yieldToOS() -- Yield to the OS scheduler.
+	while share == nil do coroutine.yieldToOS() end -- Yield to the OS scheduler.
 
 	---@diagnostic disable-next-line: param-type-mismatch
 	return table.unpack(share)

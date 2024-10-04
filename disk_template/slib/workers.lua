@@ -202,6 +202,10 @@ function Worker:exit(res)
 	self.onDeath:call(self, res)     -- Call the death hook, so listeners are aware.
 	-- We do this BEFORE removing ourselves from scheduling
 	-- as to not only half-complete the hook if we yield.
+	for _, v in pairs(self.coroutines) do
+		coroutine.close(v)
+	end
+
 	if workers.current() == self then
 		scheduler._scheduled_workers[self] = nil
 		coroutine.yieldToOS()
@@ -293,6 +297,7 @@ coroutine = {
 		--syslog:trace("Created new coroutine on worker %s", worker)
 		return new
 	end,
+
 	createNamed = function(f, name)
 		local co = coroutine.create(f)
 		coroutine.setName(co, name)
@@ -300,18 +305,6 @@ coroutine = {
 	end,
 
 	resume = function(co, ...)
-		local data = workers._get_coroutine_data(co)
-		if data == nil then
-			return builtin_coroutine.resume(co, ...)
-		end
-
-		if data.worker.dead or data.dead then
-			return false, "Worker died, cannot process."
-		end
-
-		if data.worker:paused() and workers.current().id ~= 1 then
-			return false, "Coroutine paused. Not dead, though!"
-		end
 		while true do
 			local res = table.pack(builtin_coroutine.resume(co, ...))
 			if res[1] and not res[2] then -- OS yield. Get me outta here.
@@ -333,24 +326,7 @@ coroutine = {
 		end
 	end,
 	running = builtin_coroutine.running,
-	status = function(co)
-		local data = workers._get_coroutine_data(co)
-		if data == nil then
-			return builtin_coroutine.status(co)
-		end
-
-		if data.worker.dead or data.dead then
-			return "dead"
-		end
-
-		if data.worker:paused() then
-			-- Condition is unique to KICOS, and will only be run into if you're using the eventbus or other OS features.
-			-- Do not try to resume a paused coroutine,
-			return "paused"
-		end
-
-		return builtin_coroutine.status(co)
-	end,
+	status = builtin_coroutine.status,
 	wrap = function(f, _worker)
 		local curr = builtin_coroutine.running()
 		local currData = workers._get_coroutine_data(curr)
@@ -390,6 +366,8 @@ coroutine = {
 		currData.name = name
 		return true
 	end,
+
+	close = builtin_coroutine.close,
 
 	_native = builtin_coroutine
 }
