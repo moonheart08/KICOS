@@ -5,7 +5,9 @@ local hooks = {}
 local Hook = {}
 hooks.Hook = Hook
 
----comment
+---Create a new hook.
+---Hooks are a collection of "listening" functions and an optionally attached worker that owns the listener.
+---
 ---@return Hook
 function Hook:new()
 	---@type Hook
