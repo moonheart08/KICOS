@@ -288,7 +288,9 @@ coroutine = {
 
 		local worker = _worker or currData.worker
 
-		local new = builtin_coroutine.create(f)
+		local new = builtin_coroutine.create(function(...)
+			return true, f(...) -- Make sure we account for the OS yield behavior.
+		end)
 		worker:_assign_coroutine(new)
 		--syslog:trace("Created new coroutine on worker %s", worker)
 		return new

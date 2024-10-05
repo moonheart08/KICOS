@@ -25,20 +25,24 @@ function eventbus.pump()
 					if coroutine.status(v) ~= "dead" then
 						for i = 1, 16 do
 							-- TODO: Handle OS yields in an event listener more nicely.
-							local status, oyield, status2, err = coroutine._nativeResume(v, table.unpack(signal))
-							if oyield or not status then -- If we're a real yield and not an OS yield.
-								nstat = status and status2
-								if not nstat then
-									table.insert(to_remove, k)
-								end
-								if not status then
-									syslog:warning("Event handler crashed. %s", err)
+							local status, oyield, status2 = coroutine._nativeResume(v, table.unpack(signal))
+							if not status then
+								table.insert(to_remove, k)
+								syslog:warning("Event handler %s crashed. %s", workers.prettyPrintCoroutine(v), oyield)
+								break
+							end
+
+							if oyield then
+								if not status2 then
+									table.insert(to_remove, k) --Naturally ending event handler.
 								end
 								break
 							end
 
 							if i == 16 then
-								syslog:error("FUCK")
+								syslog:error("Event handler %s took too long to complete!",
+									workers.prettyPrintCoroutine(v))
+								table.insert(to_remove, k)
 							end
 						end
 					else
