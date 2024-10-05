@@ -515,6 +515,10 @@ function graphics.currentVDisplay()
     return activeVDisplay
 end
 
+function VDisplay:__close()
+    --todo
+end
+
 graphics.GPU = GPU
 graphics.Buffer = Buffer
 graphics.VT100 = VT100

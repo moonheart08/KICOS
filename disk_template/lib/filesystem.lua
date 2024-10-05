@@ -300,6 +300,11 @@ local function loadfileExt(file, global)
 
 
 	local h = filesystem.open(file, "r")
+
+	if not h then
+		return nil
+	end
+
 	local data = h:readAll()
 	h:close()
 	return load(data, "=VFS" .. file, "bt", global or _G)

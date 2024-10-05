@@ -8,6 +8,7 @@ _OSLOADLEVEL(1)
 table.insert(package.locators, function(pname)
 	return raw_loadfile("/lib/" .. pname .. ".lua")
 end)
+coroutine.yield()
 local locatorIdx = #package.locators
 require("filesystem")                      -- get the filesystem API loaded so we can finally load things SANELY.
 table.remove(package.locators, locatorIdx) -- Get that shit outta there we have a REAL filesystem now.

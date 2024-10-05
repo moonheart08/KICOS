@@ -5,10 +5,10 @@ local eventbus <const> = {
 
 local syslog <const> = require("syslog")
 local workers <const> = require("workers")
+local computer <const> = require("computer")
 local ctx <const> = require("kicos")
 
-local native_pull = computer.pullSignal
-local native_push = computer.pushSignal
+local native_pull <const> = computer.pullSignal
 
 function eventbus.pump()
 	local i = 0
@@ -46,7 +46,6 @@ function eventbus.pump()
 					end
 				end
 
-				local adj = 0
 				for _, v in ipairs(to_remove) do
 					syslog:trace("Removed listener %s from event %s",
 						workers.prettyPrintCoroutine(eventbus._listeners[kind][v]), kind)
