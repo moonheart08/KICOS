@@ -1,5 +1,5 @@
-local raw_loadfile = ...
-local syslog = _kicosCtx.syslog
+local raw_loadfile <const> = ...
+local syslog <const> = _kicosCtx.syslog
 
 syslog:info("Starting up!")
 raw_loadfile("/slib/package.lua")() -- Finally load package management so we can have require() work.
@@ -14,16 +14,16 @@ table.remove(package.locators, locatorIdx) -- Get that shit outta there we have 
 _OSLOADLEVEL(2)
 
 coroutine.yield()
-local workers = require("workers")
+local workers <const> = require("workers")
 syslog.loadReqs()
 require("env")._setupInitialEnv()
 workers.runProgram("/sbin/dman.lua")
 
 while _OSLOADLEVEL() ~= 3 do coroutine.yieldToOS() end
 
-local graphics = require("graphics")
+local graphics <const> = require("graphics")
 
-local shellDisplay = graphics.VDisplay:newWithVT()
+local shellDisplay <close> = graphics.VDisplay:newWithVT()
 
 shellDisplay:switchTo()
 

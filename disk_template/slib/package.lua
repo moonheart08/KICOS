@@ -1,9 +1,9 @@
 _kicosCtx = _kicosCtx
 
-local syslog = _kicosCtx.syslog
+local syslog <const> = _kicosCtx.syslog
 syslog:info("Setting up package management.")
 
-local package = {}
+local package <const> = {}
 package.loaded = {
 	["_G"] = _G,
 	["coroutine"] = coroutine,

@@ -1,9 +1,8 @@
 -- The all powerful graphics driver, and the most painful thing if it crashes.
-local osctx = require("kicos")
-local component = require("component")
-local graphics = require("graphics")
-local workers = require("workers")
-local syslog = require("syslog")
+local osctx <const> = require("kicos")
+local component <const> = require("component")
+local graphics <const> = require("graphics")
+local syslog <const> = require("syslog")
 
 local primaryScreen = osctx._logVTerm._screen.address -- This is what we were running on before.
 local primaryGPU = component.list("gpu")()

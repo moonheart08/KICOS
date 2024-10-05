@@ -1,13 +1,12 @@
-local pipes = require("pipes")
-local util = require("util")
-local env = require("env")
-local present = {}
+local util <const> = require("util")
+local env <const> = require("env")
+local present <const> = {}
 
 function present.inputChar()
 	io.write(":")
 	local c = io.read(1) -- wait.
-	io.write("\b") -- backspace that out.
-	
+	io.write("\b")    -- backspace that out.
+
 	return c
 end
 
@@ -35,30 +34,30 @@ function present.hex(str, width)
 	width = width or 16
 	for i = 1, str:len() do
 		local c = str:byte(i)
-		
+
 		io.write(string.format("%02x ", c))
-		
+
 		if i % width == 0 then
 			io.write("\n")
 		end
 	end
-	
+
 	io.write("\n")
 end
 
 function present.select(tab)
 	assert(#tab < 10)
-	
+
 	for i = 1, #tab do
 		print("%1i: %s", i, tab[i])
 	end
-	
+
 	while true do
 		local c = present.inputChar()
 		if c == "q" then
 			return nil
 		end
-		
+
 		local n = tonumber(c)
 		if not (n == nil or n < 0 or n > #tab) then
 			return tab[n]

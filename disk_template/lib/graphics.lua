@@ -1,9 +1,9 @@
-local syslog = require("syslog")
-local workers = require("workers")
-local component = require("component")
-local pipes = require("pipes")
+local syslog <const> = require("syslog")
+local workers <const> = require("workers")
+local component <const> = require("component")
+local pipes <const> = require("pipes")
 
-local graphics = {}
+local graphics <const> = {}
 
 ---@type GPU[]
 graphics._managedCards = {}

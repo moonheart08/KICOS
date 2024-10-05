@@ -1,4 +1,4 @@
-local util = {}
+local util <const> = {}
 
 util.exitReasons = {
 	-- Deliberately killed.

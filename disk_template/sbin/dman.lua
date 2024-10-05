@@ -1,10 +1,10 @@
-local workers = require("workers")
-local component = require("component")
-local fs = require("filesystem")
-local syslog = require("syslog")
-local ev = require("eventbus")
-local util = require("util")
-local Hook = require("hooks").Hook
+local workers <const> = require("workers")
+local component <const> = require("component")
+local fs <const> = require("filesystem")
+local syslog <const> = require("syslog")
+local ev <const> = require("eventbus")
+local util <const> = require("util")
+local Hook <const> = require("hooks").Hook
 
 local drivers = {}
 

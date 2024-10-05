@@ -1,7 +1,6 @@
-local syslog = require("syslog")
-local util = require("util")
+local util <const> = require("util")
 
-local testing = {}
+local testing <const> = {}
 
 function testing.asserteq(left, right)
 	if not util.deepCompare(left, right) then

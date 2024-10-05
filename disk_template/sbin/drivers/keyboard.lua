@@ -1,13 +1,12 @@
-local component = require("component")
-local ev = require("eventbus")
-local syslog = require("syslog")
-local keyboard = require("keyboard")
-local computer = require("computer")
-local workers = require("workers")
-local pipes = require("pipes")
-local fs = require("filesystem")
-local util = require("util")
-local args = ...
+local ev <const> = require("eventbus")
+local syslog <const> = require("syslog")
+local keyboard <const> = require("keyboard")
+local computer <const> = require("computer")
+local workers <const> = require("workers")
+local pipes <const> = require("pipes")
+local fs <const> = require("filesystem")
+local util <const> = require("util")
+local args <const> = ...
 
 args:call() -- Tell driver manager to move along.
 

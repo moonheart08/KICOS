@@ -3,22 +3,22 @@
 -- JSON serializer/deserializer. Not OpenOS's serializer! That generates lua, which can be a problem with untrusted inputs.
 -- The parser itself is implemented with recursive descent, and should not be used on very large inputs.
 -- Consider capping the size of untrusted inputs.
-local json = {}
+local json <const> = {}
 
-local cNumRangeStart = string.byte("0", 1)
-local cNumRangeEnd = string.byte("9", 1)
-local cMinus = string.byte("-", 1)
-local cPlus = string.byte("+", 1)
-local cOpenBrace = string.byte("{", 1)
-local cCloseBrace = string.byte("}", 1)
-local cColon = string.byte(":JSON", 1)
-local cDoubleQuote = string.byte("\"", 1)
-local cBackslash = string.byte("\\", 1)
-local cOpenBracket = string.byte("[", 1)
-local cCloseBracket = string.byte("]", 1)
-local cComma = string.byte(",", 1)
-local cX = string.byte("x", 1)
-local cU = string.byte("u", 1)
+local cNumRangeStart <const> = string.byte("0", 1)
+local cNumRangeEnd <const> = string.byte("9", 1)
+local cMinus <const> = string.byte("-", 1)
+local cPlus <const> = string.byte("+", 1)
+local cOpenBrace <const> = string.byte("{", 1)
+local cCloseBrace <const> = string.byte("}", 1)
+local cColon <const> = string.byte(":JSON", 1)
+local cDoubleQuote <const> = string.byte("\"", 1)
+local cBackslash <const> = string.byte("\\", 1)
+local cOpenBracket <const> = string.byte("[", 1)
+local cCloseBracket <const> = string.byte("]", 1)
+local cComma <const> = string.byte(",", 1)
+local cX <const> = string.byte("x", 1)
+local cU <const> = string.byte("u", 1)
 
 ---@return jvalue?, integer
 function json.deserialize(text, cfg)

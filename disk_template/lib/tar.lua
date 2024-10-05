@@ -1,4 +1,4 @@
-local tar = {}
+local tar <const> = {}
 
 ---@alias TarReader fun(amount: integer): string|nil
 ---@private

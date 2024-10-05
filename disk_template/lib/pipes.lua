@@ -1,10 +1,9 @@
-local hooks = require("hooks")
-local workers = require("workers")
-local ev = require("eventbus")
-local syslog = require("syslog")
-local kicosG = require("_G") -- man, gross.
+local hooks <const> = require("hooks")
+local workers <const> = require("workers")
+local ev <const> = require("eventbus")
+local kicosG <const> = require("_G") -- man, gross.
 
-local pipes = {}
+local pipes <const> = {}
 ---@class Pipe
 ---@field writeProxy fun(...)
 ---@field buffer string | nil

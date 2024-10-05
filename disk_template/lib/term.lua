@@ -1,4 +1,4 @@
-local term = {}
+local term <const> = {}
 
 function term.parseArgs(argstr)
     ---@alias TermArg {[1]: ArgType, [2]: string}

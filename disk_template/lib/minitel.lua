@@ -4,9 +4,9 @@
 -- This is a port of Minitel, https://github.com/ShadowKatStudios/OC-Minitel/tree/master
 
 
-local computer = require("computer")
-local event = require("eventbus")
-local net = {}
+local computer <const> = require("computer")
+local event <const> = require("eventbus")
+local net <const> = {}
 net.mtu = 8192
 net.streamdelay = 5
 net.minport = 32768

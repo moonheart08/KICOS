@@ -1,7 +1,7 @@
-local workers = require("workers")
-local syslog = require("syslog")
+local workers <const> = require("workers")
+local syslog <const> = require("syslog")
 
-local env = {}
+local env <const> = {}
 
 function env.env()
 	return workers.current().env

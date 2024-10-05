@@ -1,16 +1,15 @@
-local component = require("component")
-local fs = require("filesystem")
-local ev = require("eventbus")
-local syslog = require("syslog")
+local component <const> = require("component")
+local fs <const> = require("filesystem")
+local ev <const> = require("eventbus")
 
 local msgs = {}
 
 local function queueFSMount(addr, ty)
-	table.insert(msgs, {"added", addr, ty})
+	table.insert(msgs, { "added", addr, ty })
 end
 
 local function queueFSUnmount(addr, ty)
-	table.insert(msgs, {"removed", addr, ty})
+	table.insert(msgs, { "removed", addr, ty })
 end
 
 for addr, ty in component.list("filesystem") do
@@ -43,7 +42,7 @@ while true do
 	if #msgs > 0 then
 		while #msgs > 0 do
 			local msg = table.remove(msgs, 1)
-			
+
 			if msg[1] == "added" then
 				fs.mount(msg[2], "/mnt/" .. msg[2])
 			elseif msg[1] == "removed" then

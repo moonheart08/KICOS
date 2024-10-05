@@ -1,5 +1,5 @@
-local raw_loadfile = ...
-local component = component
+local raw_loadfile <const> = ...
+local component <const> = component
 
 _G._OSVERSION = "KICOS v0.0.2"
 local _loadLevel = 0
@@ -26,7 +26,7 @@ _G._kicosCtx._logVTerm = _logVTerm -- aAAAA
 _kicosCtx.syslog = raw_loadfile("/slib/syslog.lua")()
 _kicosCtx.bootDevice = computer.getBootAddress()
 
-local syslog = _kicosCtx.syslog
+local syslog <const> = _kicosCtx.syslog
 syslog:info("Survived early boot, VTerms available.")
 syslog:info("Booting from %s", _kicosCtx.bootDevice)
 

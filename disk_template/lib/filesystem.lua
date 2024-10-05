@@ -1,12 +1,12 @@
-local syslog = require("syslog")
-local eventbus = require("eventbus")
-local component = require("component")
+local syslog <const> = require("syslog")
+local component <const> = require("component")
+
 syslog:info("Setting up filesystem core.")
-local filesystem = {}
-local path = {}
-local Overlay = {}
-local VFSNode = {}
-local handle = {}
+local filesystem <const> = {}
+local path <const> = {}
+local Overlay <const> = {}
+local VFSNode <const> = {}
+local handle <const> = {}
 filesystem.path = path
 filesystem.Overlay = Overlay
 

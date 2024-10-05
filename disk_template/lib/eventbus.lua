@@ -1,11 +1,11 @@
-local eventbus = {
+local eventbus <const> = {
 	maxEventsPumped = 32,
 	_listeners = {}
 }
 
-local syslog = require("syslog")
-local workers = require("workers")
-local ctx = require("kicos")
+local syslog <const> = require("syslog")
+local workers <const> = require("workers")
+local ctx <const> = require("kicos")
 
 local native_pull = computer.pullSignal
 local native_push = computer.pushSignal

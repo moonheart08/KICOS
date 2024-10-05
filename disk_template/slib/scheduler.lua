@@ -1,4 +1,4 @@
-local scheduler = { _scheduled_workers = {} }
+local scheduler <const> = { _scheduled_workers = {} }
 
 function scheduler.run()
 	while true do

@@ -20,7 +20,7 @@
 
 -- Exactly OpenOS's "serializer", for compatibility reasons.
 
-local serialization = {}
+local serialization <const> = {}
 
 -- delay loaded tables fail to deserialize cross [C] boundaries (such as when having to read files that cause yields)
 local local_pairs = function(tbl)

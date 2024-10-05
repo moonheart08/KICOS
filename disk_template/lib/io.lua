@@ -1,9 +1,7 @@
-local workers = require("workers")
-local pipes = require("pipes")
-local syslog = require("syslog")
-local fs = require("filesystem")
+local pipes <const> = require("pipes")
+local fs <const> = require("filesystem")
 
-local io = {}
+local io <const> = {}
 
 function io.write(s)
 	local stdout = pipes.stdout()

@@ -1,8 +1,8 @@
 -- Legacy VTerm API. Used during early boot, will be replaced later on with a more capable API.
 -- Not a target for new features.
 -- Bind the globals locally.
-local component = component
-local VTerm = {}
+local component <const> = component
+local VTerm <const> = {}
 
 local vtermId = 1
 

@@ -15,22 +15,22 @@ sender: original sender of packet
 data: the actual packet data, duh.
 ]] --
 
-local args = ...
+local args <const> = ...
 
 args:call() -- Tell driver manager to move along.
 
-local listeners = {}
-local packetPushers = {}
+local listeners <const> = {}
+local packetPushers <const> = {}
 
-local cfg = {}
+local cfg <const> = {}
 
-local event = require("eventbus")
-local component = require("component")
-local computer = require("computer")
-local serial = require("json")
-local workers = require("workers")
-local minitel = require("minitel")
-local syslog = require("syslog")
+local event <const> = require("eventbus")
+local component <const> = require("component")
+local computer <const> = require("computer")
+local serial <const> = require("json")
+local workers <const> = require("workers")
+local minitel <const> = require("minitel")
+local syslog <const> = require("syslog")
 
 local hostname = computer.address():sub(1, 8)
 local modems = {}

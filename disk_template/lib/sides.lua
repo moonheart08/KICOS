@@ -1,4 +1,4 @@
-local sides = {}
+local sides <const> = {}
 
 -- The objectively correct names.
 sides.bottom = 0

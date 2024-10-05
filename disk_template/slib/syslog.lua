@@ -1,6 +1,6 @@
-local syslog = {}
+local syslog <const> = {}
 
-local logLevels = {
+local logLevels <const> = {
 	["error"] = { 0, "ERR " },
 	["warning"] = { 1, "WARN" },
 	["info"] = { 2, "INFO" },

@@ -2,7 +2,7 @@ local hooks = {}
 
 ---@class Hook
 ---@field listeners {func: fun(res: any, ...), worker: Worker}[]
-local Hook = {}
+local Hook <const> = {}
 hooks.Hook = Hook
 
 ---Create a new hook.
