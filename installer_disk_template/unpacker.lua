@@ -163,7 +163,7 @@ function Reader:__call()
 			return nil
 		end
 
-		local toTake = math.min(remaining - 514, 512)
+		local toTake = math.min(remaining, 513)
 		data = data .. chunk:sub(1, toTake)
 		remaining = remaining - 512
 	end
