@@ -3,3 +3,4 @@ localbuild.cfg
 *.tar
 disk.tar
 workspace/*
+installer_disk_template/unpacker.lua
