@@ -12,16 +12,16 @@ local workers = {}
 ---@field parent Worker|nil
 ---@field coroutines thread[]
 ---@field id string
----@field _ev_waiter function|nil
 ---@field onDeath Hook
 ---@field env table<string, any>
 ---@field name string|nil
----@field stdin Stdin|nil
+---@field stdin Pipe|nil
+---@field children Worker[]
 ---@field stdout Stdout|nil
 local Worker = {}
 workers.Worker = Worker
----@type Worker[]
-workers._worker_list = {}
+---@type table<string, Worker>
+workers.worker_list = {}
 
 local workerId = 1
 
@@ -77,7 +77,7 @@ local io = nil
 function workers.runProgram(file, ...)
 	io = require("io")
 	local contents, err = loadfileExt(file, workers.buildGlobalContext())
-	assert(not err, err)
+	assert(contents, err)
 	coroutine.yieldToOS()
 	return Worker:new(contents, file:match("/([^/]+)$") or file, ...)
 end
@@ -145,16 +145,19 @@ function Worker:_new_empty(name)
 	---@type Worker
 	local o = {
 		dead = false,
-		_ev_waiter = nil,
 		env = {},
 		onDeath = _kicosCtx.hooks.Hook:new(),
 		coroutines = {},
+		children = {},
 		id = tostring(workerId)
 	}
+
+	setmetatable(o.children, { __mode = "v" })
 
 	local parent = workers.current()
 	if parent then
 		o.parent = parent
+		table.insert(parent.children, o)
 		for k, v in pairs(parent.env) do
 			o.env[k] = v -- Copy down env.
 		end
@@ -166,7 +169,7 @@ function Worker:_new_empty(name)
 	setmetatable(o.coroutines, { __mode = "v" })
 
 	workerId = workerId + 1
-	workers._worker_list[o.id] = o
+	workers.worker_list[o.id] = o
 	o:setname(name)
 	syslog:debug("Created %s", o)
 	return o
@@ -188,8 +191,8 @@ function Worker:exit(res)
 	assert(not self.dead, "Cannot kill a worker twice!")
 	self.dead = true
 	syslog:debug("%s has exited (result %s)", self, res or "exited")
-	workers._worker_list[self.id] = nil -- Sparse, but that's fine.
-	self.onDeath:call(self, res)     -- Call the death hook, so listeners are aware.
+	workers.worker_list[self.id] = nil -- Sparse, but that's fine.
+	self.onDeath:call(self, res)    -- Call the death hook, so listeners are aware.
 	-- We do this BEFORE removing ourselves from scheduling
 	-- as to not only half-complete the hook if we yield.
 	if coroutine.close then
@@ -229,7 +232,7 @@ function Worker:getname()
 end
 
 ---Returns a debug status printout for this worker.
----@param long boolean
+---@param long boolean|nil
 ---@return string
 function Worker:status(long)
 	if long then
@@ -240,7 +243,13 @@ function Worker:status(long)
 		end
 		return status
 	else
-		return self:__tostring()
+		if self.dead and #self.children > 0 then
+			return "held"
+		elseif self.dead then
+			return "dead"
+		else
+			return "running"
+		end
 	end
 end
 
@@ -273,7 +282,7 @@ end
 
 function workers.top(writer)
 	writer("All workers:")
-	for _, worker in pairs(workers._worker_list) do
+	for _, worker in pairs(workers.worker_list) do
 		writer(worker:status(true))
 	end
 end

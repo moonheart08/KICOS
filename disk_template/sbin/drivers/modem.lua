@@ -90,6 +90,7 @@ local function loadconfig()
     local f = io.open("/cfg/minitel.cfg", "rb")
     if f then
         local newcfg = serial.deserialize(f:read(math.maxinteger))
+        assert(type(newcfg) == "table")
         f:close()
         for k, v in pairs(newcfg) do
             cfg[k] = v

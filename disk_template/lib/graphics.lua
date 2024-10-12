@@ -447,24 +447,38 @@ end
 ---Virtual display, backed by either a VT100 or Buffer.
 ---@class VDisplay
 ---@field _backing VT100|Buffer VT100 or Buffer backing. One must be present.
----@field _id integer
+---@field _id string
+---@field _keyboardPipe Pipe
 ---@field palette integer[] The palette to use when drawing this vdisplay.
 local VDisplay = {}
 local vDisplayIDs = 1
+
+local freeIdList = {}
+
+local function getVDId()
+    if #freeIdList > 0 then
+        return table.remove(freeIdList, 1)
+    end
+
+    local id = tostring(vDisplayIDs)
+    vDisplayIDs = vDisplayIDs + 1
+    return id
+end
+
 
 function VDisplay:newWithVT(gpu, screen)
     ---@type VDisplay
     local o = {
         _backing = VT100:new(gpu or graphics.primaryGPU, screen or graphics.primaryScreen),
-        _id = vDisplayIDs,
+        _id = getVDId(),
+        _keyboardPipe = pipes.Pipe:new(),
         palette = graphics.DefaultPalette
     }
 
-    vDisplayIDs = vDisplayIDs + 1
     setmetatable(o, self)
     self.__index = self
 
-    table.insert(graphics._vdisplays, o)
+    graphics._vdisplays[o._id] = o
     o._backing.statline = string.format("VDisplay %s", o._id)
     return o
 end
@@ -473,15 +487,15 @@ function VDisplay:newFromBuffer(buffer)
     ---@type VDisplay
     local o = {
         _backing = buffer,
-        _id = vDisplayIDs,
+        _id = getVDId(),
+        _keyboardPipe = pipes.Pipe:new(),
         palette = graphics.DefaultPalette
     }
 
-    vDisplayIDs = vDisplayIDs + 1
     setmetatable(o, self)
     self.__index = self
 
-    table.insert(graphics._vdisplays)
+    graphics._vdisplays[o._id] = o
     return o
 end
 
@@ -492,6 +506,12 @@ function VDisplay:getPipeInput()
     end
 
     return nil
+end
+
+--- Gets the keyboard output pipe.
+---@return Pipe
+function VDisplay:getPipeOutput()
+    return self._keyboardPipe
 end
 
 local activeVDisplay = nil
@@ -506,17 +526,37 @@ function VDisplay:switchTo()
 end
 
 function graphics.switchToVDisplay(id)
+    if type(id) == "number" then
+        id = tostring(id)
+    end
+
     if graphics._vdisplays[id] then
         graphics._vdisplays[id]:switchTo()
+        return
     end
+    -- Run the new VT script. We assume that if the user is switching to an unknown VTT, they want a new one.
+    workers.runProgram("newvt")
 end
 
+---@return VDisplay|nil
 function graphics.currentVDisplay()
     return activeVDisplay
 end
 
 function VDisplay:__close()
-    --todo
+    graphics._vdisplays[self._id] = nil
+
+    table.insert(freeIdList, self._id)
+
+    if activeVDisplay == self then
+        self._backing:setDrawState(false)
+        activeVDisplay = nil
+    end
+
+    local k, v = next(graphics._vdisplays)
+    if k then
+        v:switchTo() -- Get us outta here.
+    end
 end
 
 graphics.GPU = GPU

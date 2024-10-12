@@ -134,15 +134,9 @@ function eventbus.listen(event, co)
 	return tostring(co)
 end
 
-function eventbus.remove(event, co, idx)
+function eventbus.remove(event, idx)
 	local listeners = eventbus._listeners
 	if listeners[event] == nil then
-		return false
-	end
-
-	local t = listeners[event]
-
-	if t[idx] ~= co then
 		return false
 	end
 

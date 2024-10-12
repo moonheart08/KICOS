@@ -1,0 +1,5 @@
+{
+    "version": 1,
+    "file": "/bin/services/telnetd.lua",
+    "args": "login"
+}

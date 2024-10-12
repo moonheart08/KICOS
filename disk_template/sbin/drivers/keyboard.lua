@@ -6,14 +6,13 @@ local workers <const> = require("workers")
 local pipes <const> = require("pipes")
 local fs <const> = require("filesystem")
 local util <const> = require("util")
+local graphics <const> = require("graphics")
 local args <const> = ...
 
 args:call() -- Tell driver manager to move along.
 
 -- Magic key that invokes SYSRQ.
 local sysrqKey = keyboard.keys.pause
-local stdin = nil
-
 do
 	local data = {}
 
@@ -66,14 +65,28 @@ ev.listen("key_down", function(ty, addr, char, code, source)
 		setHeldKey(addr, code, true)
 		lastPressedKey = code
 		syslog:trace("Key pressed: %s (%s)", string.char(char), code)
+		local stdin = nil
+
+		do
+			local currDisplay = graphics.currentVDisplay()
+
+			if currDisplay then
+				stdin = currDisplay:getPipeOutput()
+			end
+		end
+
 		if stdin and not sysrqIoBlock then
 			if getControlHeld(addr) then
 				if code == 0x2E then -- CTRL-C
-					stdin.worker:exit("killed")
+					if stdin.lastReader and not stdin.lastReader.dead then
+						stdin.lastReader:exit("killed")
+					end
 				elseif code == 0x20 then
 					stdin:close()
 				end
-			elseif specialKeyMap[code] then
+			end
+
+			if specialKeyMap[code] then
 				local res, err = pcall(function()
 					stdin:tryWrite(specialKeyMap[code])
 				end)
@@ -103,20 +116,14 @@ ev.listen("key_up", function(ty, addr, char, code, source)
 	return true
 end)
 
-ev.listen("focus_stdin", function(ty, toFocus)
-	stdin = pipes._getStdinById(toFocus)
-	syslog:trace("Focusing new stdin %s", toFocus)
-	return true
-end)
-
 local lastScratch = nil
 
 local sysrqRegistry = {
-	["1"] = function() syslog.setMaxLogLevel(0) end,
-	["2"] = function() syslog.setMaxLogLevel(1) end,
-	["3"] = function() syslog.setMaxLogLevel(2) end,
-	["4"] = function() syslog.setMaxLogLevel(3) end,
-	["5"] = function() syslog.setMaxLogLevel(4) end,
+	--["1"] = function() syslog.setMaxLogLevel(0) end,
+	--["2"] = function() syslog.setMaxLogLevel(1) end,
+	--["3"] = function() syslog.setMaxLogLevel(2) end,
+	--["4"] = function() syslog.setMaxLogLevel(3) end,
+	--["5"] = function() syslog.setMaxLogLevel(4) end,
 	["w"] = function() workers.top(function(...) syslog:info(...) end) end,
 	["m"] = function()
 		local max = 0
@@ -157,14 +164,14 @@ local sysrqRegistry = {
 	["t"] = function()
 		workers.runProgram("/bin/dotests.lua")
 	end,
-	["f1"] = function() require("graphics").switchToVDisplay(1) end,
-	["f2"] = function() require("graphics").switchToVDisplay(2) end,
-	["f3"] = function() require("graphics").switchToVDisplay(3) end,
-	["f4"] = function() require("graphics").switchToVDisplay(4) end,
-	["f5"] = function() require("graphics").switchToVDisplay(5) end,
-	["f6"] = function() require("graphics").switchToVDisplay(6) end,
-	["f7"] = function() require("graphics").switchToVDisplay(7) end,
-	["f8"] = function() require("graphics").switchToVDisplay(8) end,
+	["1"] = function() require("graphics").switchToVDisplay(1) end,
+	["2"] = function() require("graphics").switchToVDisplay(2) end,
+	["3"] = function() require("graphics").switchToVDisplay(3) end,
+	["4"] = function() require("graphics").switchToVDisplay(4) end,
+	["5"] = function() require("graphics").switchToVDisplay(5) end,
+	["6"] = function() require("graphics").switchToVDisplay(6) end,
+	["7"] = function() require("graphics").switchToVDisplay(7) end,
+	["8"] = function() require("graphics").switchToVDisplay(8) end,
 }
 
 while true do

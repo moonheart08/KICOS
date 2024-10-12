@@ -29,14 +29,18 @@ local builtins = {
 	end,
 }
 
+if fs.exists("/cfg/shrc.lua") then
+	loadfileExt("/cfg/shrc.lua", _G)()
+end
+
 while true do
 	io.write(env.prompt or "> ")
 	local line = io.read("l")
-	
+
 	if not line then
 		return -- Pipe's closed.
 	end
-	
+
 	local firstSpace = line:find(" ", 1, true)
 	local cmd = nil
 	local args = ""
@@ -46,7 +50,7 @@ while true do
 	else
 		cmd = line
 	end
-	
+
 	if cmd ~= "" then
 		local res, err = pcall(function()
 			if builtins[cmd] then
@@ -56,7 +60,7 @@ while true do
 				io.clearInput() -- Ensure we don't read anything that managed to get in our stdin when the new program was running.
 			end
 		end)
-		
+
 		if not res then
 			print("Command failed: %s", err)
 		end

@@ -1,5 +1,6 @@
 local pipes <const> = require("pipes")
 local fs <const> = require("filesystem")
+local env <const> = require("env")
 
 local io <const> = {}
 
@@ -23,14 +24,15 @@ function io.read(k, doFocus, echo)
 	k = k or "l"
 
 	if echo == nil then
-		echo = true
+		if env.env().echo == nil then
+			echo = true
+		else
+			echo = env.env().echo
+		end
 	end
 
 	local stdin = pipes.stdin()
 	local stdout = pipes.stdout()
-	if (doFocus == nil) or (doFocus == true) then
-		pipes.focusStdin()
-	end
 
 	if stdin.closed then
 		error("Cannot read from a closed pipe!")

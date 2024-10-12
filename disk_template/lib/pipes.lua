@@ -8,6 +8,8 @@ local pipes <const> = {}
 ---@field writeProxy fun(...)
 ---@field buffer string | nil
 ---@field bufferSize integer
+---@field lastReader Worker? Last reader to interact with this pipe.
+---@field lastWriter Worker? Last writer to interact with this pipe.
 ---@field onTryWrite Hook
 local Pipe = {}
 pipes.Pipe = Pipe
@@ -38,6 +40,7 @@ end
 
 -- Returns amount read.
 function Pipe:tryWrite(chunk)
+	self.lastWriter = workers.current()
 	if self.closed then
 		return false
 	end
@@ -51,7 +54,7 @@ function Pipe._buffer(pipe)
 		if res then
 			return res
 		end
-		local clen = string.len(chunk)
+
 		local avail = pipe.bufferSize - string.len(pipe.buffer)
 		if avail == 0 then
 			return 0
@@ -65,6 +68,7 @@ end
 
 -- Always writes the entirety, if possible.
 function Pipe:write(chunk)
+	self.lastWriter = workers.current()
 	if self.closed then
 		return false
 	end
@@ -87,6 +91,7 @@ end
 
 -- Ala UNIX pipes, these only support blocking reads.
 function Pipe:read(a)
+	self.lastReader = workers.current()
 	if self.closed then
 		return ""
 	end
@@ -132,6 +137,13 @@ function Pipe:__close()
 	self.onTryWrite = nil -- Ditch it.
 end
 
+--- "Hands over" the pipe to the given worker, adjusting the last reader and writer.
+--- This just makes sure you don't get Ctrl-C'd through that pipe.
+function Pipe:handover(worker)
+	self.lastReader = worker
+	self.lastWriter = worker
+end
+
 ---@param worker Worker
 ---@return Stdout
 function pipes._makeStdout(worker)
@@ -157,11 +169,6 @@ function pipes._makeStdout(worker)
 	return out
 end
 
-local stdins = {}
-local stdinIds = 1
-setmetatable(stdins, { __mode = "v" })
-
----comment
 ---@param worker Worker
 ---@return Stdin
 function pipes._makeStdin(worker)
@@ -171,33 +178,23 @@ function pipes._makeStdin(worker)
 	local stdin = Pipe:new(1024) -- 1024B input buffer.
 
 	worker.stdin = stdin
-	stdin._id = tostring(stdinIds)
-	stdin.worker = worker
-	stdinIds = stdinIds + 1
-	stdins[stdin._id] = stdin
+
 	return stdin
 end
 
 ---@param worker Worker?
----@return Stdin
+---@return Pipe
 function pipes.stdin(worker)
 	worker = worker or workers.current()
 	if not worker.stdin then
+		if worker.env.stdinTarget then
+			worker.stdin = worker.env.stdinTarget
+			return worker.stdin
+		end
 		return pipes._makeStdin(worker)
 	else
 		return worker.stdin
 	end
-end
-
--- Non-blocking focus request. Does not guarantee stdin actually becomes the current keyboard reader!
-function pipes.focusStdin(worker)
-	worker = worker or workers.current()
-	local stdin = pipes.stdin(worker)
-	ev.push("focus_stdin", stdin._id)
-end
-
-function pipes._getStdinById(id)
-	return stdins[id]
 end
 
 ---@param worker Worker?

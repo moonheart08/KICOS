@@ -291,6 +291,14 @@ local function loadfileExt(file, global)
 			end
 		end
 
+		if env.workingDirectory then
+			if filesystem.exists(env.workingDirectory .. file) then
+				newFile = env.workingDirectory .. file
+			elseif filesystem.exists(env.workingDirectory .. file .. ".lua") then
+				newfile = env.workingDirectory .. file .. ".lua"
+			end
+		end
+
 		if not newFile then
 			error("Could not locate " .. file .. " in the path when trying to load it.")
 		end

@@ -22,29 +22,12 @@ workers.runProgram("/sbin/dman.lua")
 
 while _OSLOADLEVEL() ~= 3 do coroutine.yieldToOS() end
 
-local graphics <const> = require("graphics")
+workers.runProgram("/sbin/sman.lua")
 
-local shellDisplay <close> = graphics.VDisplay:newWithVT()
+local hasGpu = component.list("gpu")()
 
-shellDisplay:switchTo()
+if hasGpu then
+	local graphics <const> = require("graphics")
 
-workers.current().env.stdoutTarget = shellDisplay:getPipeInput()
-
-workers.runProgram("hello").onDeath:await()
-
-while true do
-	local reason
-
-	workers.runProgram("shell").onDeath:await(function(worker, r)
-		reason = r
-		return true
-	end)
-
-	if reason == require("util").exitReasons.ended then
-		break
-	end
-	-- Else, keep trying.
+	graphics.switchToVDisplay(2)
 end
-
-syslog:info("Exiting.")
-computer.shutdown()
