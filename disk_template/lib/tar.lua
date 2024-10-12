@@ -53,13 +53,19 @@ local typeDict = {
 }
 
 -- This is an iterator, yippee.
----comment
----@return nil
+
+local endBlock = string.rep("\0", 512)
+
+---@return TarFileEntry|nil
 function Reader:__call()
 	local header = self:nextBlock()
 
 	if not header then
 		return nil -- End of tar.
+	end
+
+	if header == endBlock then
+		return nil
 	end
 
 	assert(string.readNullStr(header, 258) == "ustar",

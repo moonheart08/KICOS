@@ -1,5 +1,9 @@
 {
     "Lua.diagnostics.disable": [
         "lowercase-global"
+    ],
+    "Lua.workspace.ignoreDir": [
+        ".vscode",
+        "installer_disk_template",
     ]
 }

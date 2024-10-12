@@ -69,7 +69,7 @@ function io.read(k, doFocus, echo)
 		end
 
 		return b
-	elseif "a" then -- Read until EOF, i.e. closed.
+	elseif k == "a" then -- Read until EOF, i.e. closed.
 		local b = ""
 
 		while true do
@@ -89,6 +89,7 @@ function io.read(k, doFocus, echo)
 		local b = ""
 		while k > 0 do
 			b = b .. stdin:read(1)
+			k = k - 1
 
 			if stdin.closed then
 				break

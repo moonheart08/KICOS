@@ -1,7 +1,13 @@
 local util <const> = require("util")
 local env <const> = require("env")
+local io <const> = require("io")
 local present <const> = {}
 
+-- OpenOS compat shim.
+local old_print = print
+local function print(...)
+	old_print(string.format(...))
+end
 function present.inputChar()
 	io.write(":")
 	local c = io.read(1) -- wait.
@@ -45,6 +51,16 @@ function present.hex(str, width)
 	io.write("\n")
 end
 
+function present.yesNo()
+	local yn = nil
+
+	while yn ~= "y" and yn ~= "n" do
+		yn = present.inputChar()
+	end
+
+	return yn == "y"
+end
+
 function present.select(tab)
 	assert(#tab < 10)
 
@@ -54,6 +70,7 @@ function present.select(tab)
 
 	while true do
 		local c = present.inputChar()
+
 		if c == "q" then
 			return nil
 		end
