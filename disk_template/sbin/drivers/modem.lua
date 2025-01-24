@@ -113,14 +113,14 @@ function start()
 
     modems = {}
     for a, t in component.list("modem") do
-        modems[#modems + 1] = component.proxy(a)
+        modems[#modems + 1] = component.proxy(a, "modem")
     end
     for k, v in ipairs(modems) do
         v.open(cfg.port)
         syslog:info("Opened port " .. cfg.port .. " on " .. v.address)
     end
     for a, t in component.list("tunnel") do
-        modems[#modems + 1] = component.proxy(a)
+        modems[#modems + 1] = component.proxy(a, "tunnel")
     end
 
     local function genPacketID()
@@ -185,7 +185,7 @@ function start()
     local function processPacket(_, localModem, from, pport, _, packetID, packetType, dest, sender, vPort, data)
         pruneCache()
         if pport == cfg.port or pport == 0 then -- for linked cards
-            syslog:debug("%s, %s, %s, %s", cfg.port, vPort, packetType, dest)
+            syslog:trace("%s, %s, %s, %s", cfg.port, vPort, packetType, dest)
             if checkPCache(packetID) then return true end
             minitel.friends[sender] = computer.uptime()
             if dest == hostname then
