@@ -21,6 +21,8 @@ Code ported from other repositories is present here under the original license. 
 - /lib/keyboard.lua (OpenOS)
 - /sbin/drivers/modem.lua (Minitel)
 - /lib/minitel.lua (Minitel)
+- The GTNH-OCLuaDocumentation submodule is a fork of https://github.com/C0bra5/GTNH-OCLuaDocumentation
+  - License disclaimer: This is NEVER LOADED AT RUNTIME and its GPL status does not apply to the rest of KICOS.
 
 ## Memory usage
 KICOS has a few major memory users, but the largest is simply VDisplays and tracking that much text (as far as I can tell.) 

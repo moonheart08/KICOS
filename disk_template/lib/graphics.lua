@@ -56,7 +56,7 @@ local colorDepthLookup = {
 ---@field bufferMemory integer total amount of buffer memory in this GPU.
 ---@field displayBuffer Buffer? The display/screen buffer for drawing to.
 ---@field _buffers Buffer[]
----@field _proxy table Internally managed component proxy.
+---@field _proxy gpu Internally managed component proxy.
 ---@field width integer
 ---@field height integer
 local GPU = {}
@@ -72,7 +72,7 @@ function GPU:new(address)
         bufferMemory = 0,
         displayBuffer = nil,
         _buffers = {},
-        _proxy = component.proxy(address),
+        _proxy = component.proxy(address, "gpu"),
         width = 0,
         height = 0,
     }

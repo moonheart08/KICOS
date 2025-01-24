@@ -34,4 +34,5 @@ if present.yesNo() then
     end
 end
 
-local source = 
+local interestingFolders = { "bin", "cfg", "doc", "lib", "sbin", "slib", "tests" }
+local interestingFiles = { "init.lua" }

@@ -1,0 +1,3 @@
+[submodule "GTNH-OCLuaDocumentation"]
+	path = GTNH-OCLuaDocumentation
+	url = git@github.com:moonheart08/GTNH-OCLuaDocumentation.git

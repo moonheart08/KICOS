@@ -5,5 +5,8 @@
     "Lua.workspace.ignoreDir": [
         ".vscode",
         "installer_disk_template",
+    ],
+    "Lua.workspace.library": [
+        "GTNH-OCLuaDocumentation/docs"
     ]
 }

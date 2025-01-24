@@ -12,6 +12,9 @@ filesystem.Overlay = Overlay
 
 function Overlay:new(fs, physPath)
 	---@class Overlay
+	---@field readonly boolean
+	---@field label string
+	---@field proxy filesystem
 	local o = {
 		readonly = false,
 		label = fs,
@@ -21,7 +24,7 @@ function Overlay:new(fs, physPath)
 	self.__index = self
 
 	syslog:info("Mounting %s at %s", fs, physPath)
-	o.proxy = component.proxy(fs)
+	o.proxy = component.proxy(fs, "filesystem")
 	o.physPath = physPath
 
 	return o

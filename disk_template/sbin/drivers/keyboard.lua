@@ -186,6 +186,8 @@ while true do
 
 	local key = keyboard.keys[lastPressedKey]
 
+	lastPressedKey = nil
+
 	if sysrqRegistry[key] ~= nil then
 		sysrqRegistry[key](key)
 	else
